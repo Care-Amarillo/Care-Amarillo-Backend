@@ -1,418 +1,22 @@
 // Using ES6 imports
 import mongoose from 'mongoose';
+import './dbconnection.js'; 
+
+import Provider from './provider.js';
+import User from './user.js';
+import ProviderEntry from './providerEntry.js';
+import ManagingUser from './managingUser.js';
 
 mongoose.Promise = global.Promise;
 
-const Schema = mongoose.Schema;
-//objectId, not really needed, created by default
-// const ObjectId = mongoose.Types.ObjectId;
 
-const mongoDBUrl = "localhost";
-const mongoDBPort = "27017";
-const mongoDBDatabase = "CareAmarilloDB";
 
-//user schema
-const userSchema = new Schema({
-    fName: {type: "String", required: true},
-    lName: {type: "String", required: true},
-    email: {type: "String", required:true}, 
-    phone: {type: "String", required: true},
-    title: {type: "String", required: true},
-    admin: {type: "Boolean", default: false, required: true},
-    userType: {type: "Number", default:1, required: true},
-    createdAt: {type: "Date", default: Date.now, required: true},
-    updatedAt: {type: "Date", default: Date.now, required: true},
-    active: {type: "Boolean", default: false, required:true}
 
-});
-
-//create user model
-const User = mongoose.model("User", userSchema, "Users");
-
-
-//provider schema
-const providerSchema = new Schema({
-    name: {type: "String", required: true},
-    lat: {type: "String", required: true},
-    long: {type: "String", required: true},
-    address: {type: "String", required: true},
-    email: {type: "String", required:true}, 
-    phone: {type: "String", required: true},
-    title: {type: "String", required: true},
-    zip: {type: "String",  required: true},
-    type: {type: "Number", default:1, required: true},
-    timesUpdated: {type: "Number", default: 0, required: true},
-    bedsUsed: {type: "Number", default: 0, required: true},
-    totalBeds: {type: "Number", default: 0, required: true},
-    createdAt: {type: "Date", default: Date.now, required: true},
-    updatedAt: {type: "Date", default: Date.now, required: true},
-    active: {type: "Boolean", default: false, required:true}
-
-});
-
-//create provider model
-const Provider = mongoose.model("Provider", providerSchema, "Providers");
-
-//provider entry schema
-//every time a provider adds or removes a bed, this will get updated
-const providerEntrySchema = new Schema({
-    amountChanged: {type: "Number", default: 0, required: true},
-    provider: {type: mongoose.Schema.Types.ObjectId, ref:'Provider', required: true},
-    createdAt: {type: "Date", default: Date.now, required: true},
-    updatedAt: {type: "Date", default: Date.now, required: true}
-
-});
-
-//create provider entry model
-const ProviderEntry = mongoose.model("ProviderEntry", providerEntrySchema, "ProviderEntries");
-
-
-//managing user schema
-const managingUserSchema = new Schema({
-    user: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
-    provider: {type: mongoose.Schema.Types.ObjectId, ref:'Provider', required: true},
-    createdAt: {type: "Date", default: Date.now, required: true},
-    updatedAt: {type: "Date", default: Date.now, required: true}
-
-});
-
-//create managing user model
-const ManagingUser = mongoose.model("ManagingUser", managingUserSchema, "ManagingUser");
-
-// Add a new User document
-const addUser = async(userObj) => { 
-    try {
-        //create new user object 
-        const newUser = new User(userObj); 
-        //save user to database
-        let savePromise = newUser.save();  
-       
-        //return promise so we can print it after save
-        return savePromise;
-       
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-
-// Update an user's profile
-const updateUserProfile = async(userObj) => {  
-    try {
-       
-        let foundUserDoc = await User.findById(userObj._id).exec();  
-        foundUserDoc.fName = userObj.fName;
-        foundUserDoc.lName = userObj.lName;
-        foundUserDoc.email = userObj.email;
-        foundUserDoc.phone = userObj.phone;
-        foundUserDoc.title = userObj.title;
-        foundUserDoc.active = userObj.active;
-        let updatePromise = foundUserDoc.save(); 
-        return updatePromise;
-        
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-
-// Update an user's active status
-// equivalent to deactivating or deleting an user. 
-const updateUserStatus = async(userId, active) => {  
-    try {
-       
-        let foundUserDoc = await User.findById(userId).exec();  
-        foundUserDoc.active = active;
-        let updatePromise = foundUserDoc.save(); 
-        return updatePromise;
-        
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-
-
-
-
-// Add a new Provider document
-const addProvider = async(providerObj) => { 
-    try {
-
-
-        //create new provider object 
-        const newProvider = new Provider(providerObj); 
-        //save provider to database
-        let savePromise = newProvider.save();  
-       
-        //return promise so we can print it after save
-        return savePromise;
-       
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-
-// Update an user's profile
-const updateProviderProfile = async(providerObj) => {  
-    try {
-       
-        let foundProviderDoc = await Provider.findById(providerObj._id).exec();  
-        foundProviderDoc.name = providerObj.name;
-        foundProviderDoc.address = providerObj.address;
-        foundProviderDoc.zip = providerObj.zip;
-        foundProviderDoc.lat = providerObj.lat;
-        foundProviderDoc.long = providerObj.long;
-        foundProviderDoc.email = providerObj.email;
-        foundProviderDoc.phone = providerObj.phone;
-        foundProviderDoc.title = providerObj.title;
-        foundProviderDoc.active = providerObj.active;
-        let updatePromise = foundProviderDoc.save(); 
-        return updatePromise;
-        
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-
-// Update an user's profile
-const updateProviderCapacity = async(providerObj) => {  
-    try {
-       
-        let foundProviderDoc = await Provider.findById(providerObj._id).exec();  
-        foundProviderDoc.bedsUsed = providerObj.bedsUsed;
-        foundProviderDoc.totalBeds = providerObj.totalBeds;
-        let updatePromise = foundProviderDoc.save(); 
-        return updatePromise;
-
-       
-        
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-
-// Update an providers's active status
-// equivalent to deactivating or deleting a provider. 
-const updateProviderStatus = async(providerId, active) => {  
-    try {
-       
-        let foundProviderDoc = await Provider.findById(providerId).exec();  
-        foundProviderDoc.active = active;
-        let updatePromise = foundProviderDoc.save(); 
-        return updatePromise;
-        
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-// Add a new Provider document
-const addProviderEntry = async(providerEntryObj) => { 
-    try {
-
-
-
-        //create new provider entry object 
-        const newProviderEntry = new ProviderEntry(providerEntryObj); 
-        //save provider entry to database
-        let savePromise = newProviderEntry.save();  
-       
-        //return promise so we can print it after save
-        return savePromise;
-       
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-
-
-
-// Add a new ManagingUser document
-const addManagingUser = async(managingUserObj) => { 
-    try {
-
-
-        //create new managing user object 
-        const newManagingUser = new ManagingUser(managingUserObj); 
-        //save managing user to database
-        let savePromise = newManagingUser.save();  
-       
-        //return promise so we can print it after save
-        return savePromise;
-       
-    }
-    catch (err) {
-        console.log(err);
-    }
-}
-
-
-  //get all users from the User collection
-  const getAllUsers = async() => {
-      try{
-          //return Promise
-          return User.find({active:true}).exec();
-
-      }
-      catch(err){
-          console.log("error getting all users is " + err);
-
-      }
-
-  }
-
-
-
-  //get an user with an ObjectId from the User collection
-  const getUserWithId = async(objectId) => {
-    try{
-        //return Promise
-        return User.findById(objectId).exec();
-    }
-    catch(err){
-        console.log("error getting all users is " + err);
-
-    }
-
-}
-
-
-   //get all providers from the Provider collection
-   const getAllProviders = async() => {
-    try{
-        //return Promise
-        return Provider.find({active:true}).exec();
-    }
-    catch(err){
-        console.log("error getting all providers is " + err);
-
-    }
-
-}
-
-//get a provider with an object id from the Provider collection
-const getProviderWithId = async(id) => {
-    try{
-        //return Promise
-        return Provider.findById(id).exec();
-    }
-    catch(err){
-        console.log("error getting all providers is " + err);
-
-    }
-
-}
-
-
-//get all provider entries from the ProviderEntry collection
-const getAllProviderEntries = async() => {
-    try{
-        //return Promise
-        return ProviderEntry.find().exec();
-    }
-    catch(err){
-        console.log("error getting all provider entries is " + err);
-
-    }
-
-}
-
-
-//get all managing users from the ManagingUser collection
-const getAllManagingUsers = async() => {
-    try{
-        //return Promise
-        return ManagingUser.find().exec();
-    }
-    catch(err){
-        console.log("error getting all managing users is " + err);
-
-    }
-
-}
-
-
-//get all managing users from the ManagingUser collection, with a certain provider id
-const getProviderEntriesByProviderId = async(providerId) => {
-    try{
-        const idToSearch = new mongoose.Types.ObjectId(providerId);
-        //return Promise
-        return ProviderEntry.find({provider: idToSearch}).populate('provider').exec();
-
-    }
-    catch(err){
-        console.log("error getting all managing users is " + err);
-
-    }
-
-}
-
- //get all managing users from the ManagingUser collection, with a certain provider id
-const getManagingUserByProviderId = async(providerId) => {
-    try{
-        const idToSearch = new mongoose.Types.ObjectId(providerId);
-        //return Promise
-        return ManagingUser.find({provider: idToSearch}).populate('user').populate('provider').exec();
-
-    }
-    catch(err){
-        console.log("error getting all managing users is " + err);
-
-    }
-
-}
-
-
- //get all managing users from the ManagingUser collection, with a certain provider id
- const getManagingUserByUserId = async(userId) => {
-    try{
-        const idToSearch = new mongoose.Types.ObjectId(userId);
-        //return Promise
-        return ManagingUser.find({provider: idToSearch}).populate('user').populate('provider').exec();
-
-    }
-    catch(err){
-        console.log("error getting all managing users is " + err);
-
-    }
-
-}
-
-  
-
-//connect to the database
-const connectToDB = async() => {
-    try{
-        const connectionInfo = `mongodb://${mongoDBUrl}:${mongoDBPort}/${mongoDBDatabase}`;
-        const mongoDBConfigObject = {
-            useNewUrlParser : true,
-            useUnifiedTopology : true
-        }
-       await mongoose.connect(connectionInfo, mongoDBConfigObject );
-    }
-    catch(err){
-        console.log(err);
-    }
-}
 
 const main = async() => {
 
     try{
 
-        await connectToDB();
        
 
         /***********************************************************************************/
@@ -430,13 +34,13 @@ const main = async() => {
         user.updatedAt =  Date.now();
 
         //call addUser to save the new usser to the database
-        await addUser(user);
+        await User.create(user);
 
 
        
 
         //get and print the providers in the database
-        let allUsers = await getAllUsers();
+        let allUsers = await User.read();
         console.log("All users: "  +  allUsers);
 
        
@@ -461,48 +65,50 @@ const main = async() => {
         //  provider.changedBy = user._id;
  
          //call addProvider to save the new provider to the database
-         await addProvider(provider);
+         await Provider.create(provider);
 
          //get and print the providers in the database
-        let allProviders = await getAllProviders();
+        let allProviders = await Provider.read();
         console.log("All providers: "  +  allProviders)
 
 
         /***********************************************************************************/
         //get first user and updateProfile info
         const firstUser = allUsers[0];
-        firstUser.fName = "Timmy";
-        await updateUserProfile(firstUser);
+        let updatedFirstUser = firstUser;
+        updatedFirstUser.fName = "Timmy";
+        await User.update(firstUser, updatedFirstUser);
 
 
         /***********************************************************************************/
          //get and print the providers in the database
-         allUsers = await getAllUsers();
+         allUsers = await User.read();
          console.log("All users: "  +  allUsers);
 
          //add managingUser
          const managingUser = new ManagingUser();
-         managingUser.provider = provider._id;
-         managingUser.user = user._id;
+         managingUser.provider = allProviders[0]._id;
+         managingUser.user = allUsers[0]._id;
 
-         await addManagingUser(managingUser);
+        await ManagingUser.create(managingUser);
 
         /***********************************************************************************/
 
          //get and print the users from latest insert  in the database
-        let allManagingUsersFromLatest = await getAllManagingUsers();
+        let allManagingUsersFromLatest = await ManagingUser.read(null,['user','provider']);
         console.log("All managers users from latest id: "  +  allManagingUsersFromLatest);
 
 
          //get and print the users from latest insert  in the database
-        let allProvidersFromLatest = await getManagingUserByProviderId(provider._id);
-        console.log("All providers from latest id: "  +  allProvidersFromLatest)
+        let allProvidersFromLatest = await ManagingUser.read({_id: allManagingUsersFromLatest[0]._id},['user','provider']);
+        console.log("All managingUsers from latest id: "  +  allProvidersFromLatest)
 
         /***********************************************************************************/
         //get previous beds used
         let prevBeds = provider.bedsUsed;
         //change beds count
-        provider.bedsUsed = 4;
+        let newProviderToAdd = provider;
+        newProviderToAdd.bedsUsed = 4;
         //get change count
         let changeCount = 0;
 
@@ -512,7 +118,7 @@ const main = async() => {
         else{
             changeCount = provider.bedsUsed - prevBeds;
         }
-        await updateProviderCapacity(provider);
+        await Provider.update(allProviders[0], newProviderToAdd);
 
         //add bed change to provider entries
         const providerEntry = new ProviderEntry();
@@ -521,11 +127,11 @@ const main = async() => {
         providerEntry.amountChanged = changeCount;
         providerEntry.provider = idToSearch;
         //add provider entry
-        await addProviderEntry(providerEntry);
+        await ProviderEntry.create(providerEntry);
 
 
           //get and print the provider entries
-        let allProvidersEntries = await getAllProviderEntries();
+        let allProvidersEntries = await ProviderEntry.read(null,['provider']);
         console.log("All providers : "  +  allProvidersEntries)
 
         /***********************************************************************************/
@@ -533,21 +139,21 @@ const main = async() => {
         //get previous beds used
         prevBeds = provider.bedsUsed;
         //change beds used and update capacity again
-        provider.bedsUsed = 6;
+        newProviderToAdd.bedsUsed = 6;
         changeCount = prevBeds - provider.bedsUsed;
-        await updateProviderCapacity(provider);
+        await Provider.update(allProviders[0], newProviderToAdd);
 
          //add bed change to provider entries
-         const providerEntryTwo = ProviderEntry();
+         const providerEntryTwo = new ProviderEntry();
          //get objectId to add to provider
          providerEntryTwo.amountChanged = changeCount;
          providerEntryTwo.provider = idToSearch;
          //add provider entry
-         await addProviderEntry(providerEntryTwo);
+        await ProviderEntry.create(providerEntryTwo);
         /***********************************************************************************/
 
         //get and print the provider entries
-        let allProvidersEntriesFromLatest = await getProviderEntriesByProviderId(provider._id);
+        let allProvidersEntriesFromLatest = await ProviderEntry.read({_id: allProvidersEntries[0]._id},['provider']);
         console.log("All providers from latest : "  +  allProvidersEntriesFromLatest);
 
 
