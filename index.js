@@ -1,167 +1,953 @@
 // Using ES6 imports
 import mongoose from 'mongoose';
 import './dbconnection.js'; 
+//configure passport
+import './passport.js';
+
+import passport from 'passport';
+import JWT from 'jsonwebtoken';
 
 import Provider from './provider.js';
 import User from './user.js';
 import ProviderEntry from './providerEntry.js';
 import ManagingUser from './managingUser.js';
 
+
+import express from 'express';
+import bodyParser from 'body-parser';
+import AuditEntry from './auditEntry.js';
+
 mongoose.Promise = global.Promise;
 
 
 
+const app = express();
+
+const port = 3000;
+
+app.use( bodyParser.json() );
+app.use( bodyParser.urlencoded() );
+
+//listen on specified port
+app.listen(port, () => {
+
+});
 
 
-const main = async() => {
+/*************USER ENDPOINTS*****************/
+
+//get all users
+app.get("/users", passport.authenticate("jwt", {session:false}),  async(req, res) => {
 
     try{
 
-       
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin){
+            return res.send({"Message": "Unauthorized"});
+        }
 
-        /***********************************************************************************/
-        //create new user object
-        const user = new User();
-        user.fName = "Fred";
-        user.lName = "Johnson";
-        user.email =  "fred.johnson@amarillocollege.com";
-        user.phone =  "8062345383";
-        user.active =  true;
-        user.admin =  false;
-        user.userType =  1;
-        user.title =  "Manager";
-        user.createdAt =  Date.now();
-        user.updatedAt =  Date.now();
-
-        //call addUser to save the new usser to the database
-        await User.create(user);
-
-
-       
-
-        //get and print the providers in the database
         let allUsers = await User.read();
-        console.log("All users: "  +  allUsers);
-
        
+        res.send(allUsers);
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
 
-        /***********************************************************************************/
-         //create new Provider object
-         const provider = new Provider();
-         provider.name = "Panhandle Services";
-         provider.lat= "34.000";
-         provider.long= "-34.000";
-         provider.email =  "info@panhandleservices.com";
-         provider.phone =  "8062348888";
-         provider.active =  true;
-         provider.address =  "3300 S Polk";
-         provider.zip =  "79107";
-         provider.type =  1;
-         provider.totalBeds =  32;
-         provider.bedsUsed =  0;
-         provider.title =  "Best Services In Town";
-         provider.createdAt =  Date.now();
-         provider.updatedAt =  Date.now();
-        //  provider.changedBy = user._id;
- 
-         //call addProvider to save the new provider to the database
-         await Provider.create(provider);
-
-         //get and print the providers in the database
-        let allProviders = await Provider.read();
-        console.log("All providers: "  +  allProviders)
+});
 
 
-        /***********************************************************************************/
-        //get first user and updateProfile info
-        const firstUser = allUsers[0];
-        let updatedFirstUser = firstUser;
-        updatedFirstUser.fName = "Timmy";
-        await User.update(firstUser, updatedFirstUser);
+//get user by id
+app.get("/users/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
 
 
-        /***********************************************************************************/
-         //get and print the providers in the database
-         allUsers = await User.read();
-         console.log("All users: "  +  allUsers);
+    try{
+        //get user id
+        let userId = req.params.userId;
+        let allUsers = await User.read({_id: userId});
+        //check if user exists
+        if(allUsers.length > 0){
+            let userDoc = allUsers[0];
 
-         //add managingUser
-         const managingUser = new ManagingUser();
-         managingUser.provider = allProviders[0]._id;
-         managingUser.user = allUsers[0]._id;
+            let newModel = {}
+            for(let [key, value] of Object.entries(userDoc.toJSON())) {
+                if(key == "password" || key == "salt") continue;
+                newModel[key] = value;
+            }
 
-        await ManagingUser.create(managingUser);
+            res.send(newModel);
 
-        /***********************************************************************************/
-
-         //get and print the users from latest insert  in the database
-        let allManagingUsersFromLatest = await ManagingUser.read(null,['user','provider']);
-        console.log("All managers users from latest id: "  +  allManagingUsersFromLatest);
-
-
-         //get and print the users from latest insert  in the database
-        let allProvidersFromLatest = await ManagingUser.read({_id: allManagingUsersFromLatest[0]._id},['user','provider']);
-        console.log("All managingUsers from latest id: "  +  allProvidersFromLatest)
-
-        /***********************************************************************************/
-        //get previous beds used
-        let prevBeds = provider.bedsUsed;
-        //change beds count
-        let newProviderToAdd = provider;
-        newProviderToAdd.bedsUsed = 4;
-        //get change count
-        let changeCount = 0;
-
-        if(prevBeds > provider.bedsUsed){
-            changeCount = prevBeds - provider.bedsUsed;
         }
         else{
-            changeCount = provider.bedsUsed - prevBeds;
+            res.send({"message": "User doesn't exist"});
+
         }
-        await Provider.update(allProviders[0], newProviderToAdd);
-
-        //add bed change to provider entries
-        const providerEntry = new ProviderEntry();
-        //get objectId to add to provider
-        const idToSearch = new mongoose.Types.ObjectId(provider._id);
-        providerEntry.amountChanged = changeCount;
-        providerEntry.provider = idToSearch;
-        //add provider entry
-        await ProviderEntry.create(providerEntry);
-
-
-          //get and print the provider entries
-        let allProvidersEntries = await ProviderEntry.read(null,['provider']);
-        console.log("All providers : "  +  allProvidersEntries)
-
-        /***********************************************************************************/
-
-        //get previous beds used
-        prevBeds = provider.bedsUsed;
-        //change beds used and update capacity again
-        newProviderToAdd.bedsUsed = 6;
-        changeCount = prevBeds - provider.bedsUsed;
-        await Provider.update(allProviders[0], newProviderToAdd);
-
-         //add bed change to provider entries
-         const providerEntryTwo = new ProviderEntry();
-         //get objectId to add to provider
-         providerEntryTwo.amountChanged = changeCount;
-         providerEntryTwo.provider = idToSearch;
-         //add provider entry
-        await ProviderEntry.create(providerEntryTwo);
-        /***********************************************************************************/
-
-        //get and print the provider entries
-        let allProvidersEntriesFromLatest = await ProviderEntry.read({_id: allProvidersEntries[0]._id},['provider']);
-        console.log("All providers from latest : "  +  allProvidersEntriesFromLatest);
-
 
     }
     catch(error){
-        console.log(`main error: ${error}`);
+        console.log(error);
+        res.send(error);
     }
-}
+
+});
 
 
-main();
+//authenticate user
+app.post("/users/authenticate", async(req, res) => {
+
+    try{
+       
+        passport.authenticate("local", {session:false}, (err, user, info) => {
+
+            //check if error or no user object exists
+            if(err || !user){
+                return res.status(400).json({
+                    message: "Something happened and authentication was unsuccessful",
+                    user: user
+                });
+            }
+
+           
+            //login user via passport
+            req.login(user, {session: false}, (error) => {
+                if(error){
+                    res.send(error);
+                }
+                //generate JWT token
+                const token = JWT.sign(user, "7dV4J9Y85u35P!mb4hT2brQ2ikXMYp^%f1h");
+                return res.json({ user, token});
+
+            });
+
+        })(req, res); //passing req and res to next middleware
+    }
+    catch(error){
+        console.log("error: " + error);
+        res.send(error);
+    }
+
+});
+
+
+//update user password
+app.put("/users/updatePassword/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        
+        let requestedUser = req.user;
+        let userId = req.params.userId;
+        
+        
+
+        if(requestedUser._id.toString() !== userId || !requestedUser.superAdmin || !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+        }
+       
+        //get body from the request
+        let body = req.body;
+
+        let allUsers = await User.read({_id: userId});
+
+        if(allUsers.length > 0){
+            let userDoc = allUsers[0];
+            //generate salt and encrypted password for the user
+            let encryptedPasswordAndSalt = await User.generateHash(body.password);
+            let encryptedPassword = encryptedPasswordAndSalt.encryptedString;
+            let salt = encryptedPasswordAndSalt.salt;
+
+             //set data for new password
+            let updateFields = {
+                password: encryptedPassword,
+                salt: salt,
+                updatedAt: Date.now()
+            };
+
+            
+
+             //add audit entry before saving 
+             AuditEntry.addAuditEntry(req.user, updateFields, "Update", "PUT", "/users/password/:userId", userDoc, "User");
+
+             let updatedUser = await User.update(userDoc, updateFields); 
+ 
+ 
+             let cleanUpdatedUser = {}
+             for(let [key, value] of Object.entries(updatedUser.toJSON())) {
+                 if(key == "password" || key == "salt") continue;
+                 cleanUpdatedUser[key] = value;
+             }
+ 
+             //send update user response
+             res.send({"Message":"Updated User successfully", user: cleanUpdatedUser});
+        }
+        else{
+            res.send({"Message":"User doesn't exist"});
+        }
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+});
+
+
+//create user
+app.post("/users", async(req, res) => {
+
+    try{
+
+        //get body from the request
+        let body = req.body;
+        
+        if(!body.fName || 
+            !body.lName ||
+            !body.email ||
+            !body.phone ||
+            !body.title ||
+            !body.userType ||
+            !body.password 
+           ){
+                return res.send({"Message": "Missing information"});
+           } 
+
+
+        let validPhone = await User.validPhone(body.phone);
+        if(!validPhone){
+            return res.send({"Message": "Invalid Phone Number"});
+        }
+
+        let validEmail = await User.validEmail(body.email);
+        if(!validEmail){
+            return res.send({"Message": "Invalid Email"});
+        }
+
+        //check if the user email exists
+        let allUsers = await User.read({email: body.email});
+
+        if(allUsers.length > 0){
+            return res.send({"Message": "User exists"});
+        }
+
+        //generate salt and encrypted password for the user
+        let encryptedPasswordAndSalt = await User.generateHash(body.password);
+        let encryptedPassword = encryptedPasswordAndSalt.encryptedString;
+        let salt = encryptedPasswordAndSalt.salt;
+
+
+        //only let a super admin create a super admin
+        // if(body.userType === 3){
+        //     if(requestedUser.userType !== 3){
+        //         return res.send("Message", "Unauthorized");
+        //     }
+        // }
+
+
+       
+       
+
+        //set data for new user
+        let newUserInfo = {
+            fName: body.fName,
+            lName: body.lName,
+            email: body.email,
+            phone: body.phone,
+            title: body.title,
+            admin: body.admin,
+            superAdmin: body.superAdmin,
+            userType: body.userType,
+            active: body.active,
+            password: encryptedPassword,
+            salt: salt
+        };
+
+        //create user
+        let user = await User.create(newUserInfo);
+
+
+        let cleanUser = {}
+        for(let [key, value] of Object.entries(user.toJSON())) {
+            if(key == "password" || key == "salt") continue;
+            cleanUser[key] = value;
+        }
+
+        res.send({"Message": "Person created successfully", user: cleanUser});
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+});
+
+
+
+//update user
+app.put("/users/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        //get user id
+        let userId = req.params.userId;
+        let allUsers = await User.read({_id: userId});
+
+        
+
+        let requestedUser = req.user;
+        if(requestedUser._id.toString() !== userId || !requestedUser.superAdmin || !requestedUser.active){
+            return res.send("Message", "Unauthorized");
+        }
+        
+        //check if user exists
+        if(allUsers.length > 0){
+            let userDoc = allUsers[0];
+            let updateFields = req.body;
+            updateFields.updatedAt = Date.now();
+
+            //add audit entry before saving 
+            AuditEntry.addAuditEntry(req.user, req.body, "Update", "PUT", "/users/:userId", userDoc, "User");
+
+            let updatedUser = await User.update(userDoc, updateFields); 
+
+
+            let cleanUpdatedUser = {}
+            for(let [key, value] of Object.entries(updatedUser.toJSON())) {
+                if(key == "password" || key == "salt") continue;
+                cleanUpdatedUser[key] = value;
+            }
+
+            //send update user response
+            res.send({"Message":"Updated User successfully", user: cleanUpdatedUser});
+
+
+        }
+        else{
+            res.send({"Message":"User doesn't exist"});
+        }
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+/*************END USER ENDPOINTS*****************/
+
+
+
+
+/*************PROVIDER ENDPOINTS*****************/
+
+//get all providers
+//everyone can read all providers
+//anonymous user will need to look up providers
+app.get("/providers" , async(req, res) => {
+
+    try{
+        let allProviders = await Provider.read();
+        res.send(allProviders);
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+//get provider by id
+app.get("/providers/:providerId", async(req, res) => {
+
+    try{
+        //get provider id
+        let providerId = req.params.providerId;
+
+
+        let allProviders = await Provider.read({_id: providerId});
+        if(allProviders.length > 0){
+            let providerDoc = allProviders[0];
+            res.send(providerDoc);
+        }
+        else{
+            res.send({"Message":"No providers found with given id"});
+        }
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+
+
+//create provider using super admin
+app.post("/providers", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        
+        //get body from the request
+        let body = req.body;
+
+        if(
+            !body.name ||
+            !body.phone ||
+            !body.email ||
+            !body.title ||
+            !body.type ||
+            !body.zip ||
+            !body.address ||
+            !body.totalBeds ||
+            !body.bedsUsed 
+        )
+        {
+            return res.send({"Message": "Missing Data"});
+        }
+
+        if(!Number.isInteger(body.totalBeds)){
+            return res.send({"Message": "Invalid Total Beds"});
+        }
+
+        if(!Number.isInteger(body.bedsUsed)){
+            return res.send({"Message": "Invalid Beds Used"});
+        }
+
+        let validPhone = await User.validPhone(body.phone);
+        if(!validPhone){
+            return res.send({"Message": "Invalid Phone Number"});
+        }
+
+        let validEmail = await User.validEmail(body.email);
+        if(!validEmail){
+            return res.send({"Message": "Invalid Email"});
+        }
+
+
+
+        let requestedUser = req.user;
+
+        if(!requestedUser.superAdmin && !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+        //check if the provider name exists
+        let allProviders = await Provider.read({name: body.name});
+        //if provider name exists, send message to client
+        if(allProviders.length > 0){
+            return res.send({"Message": "Provider name exists"});
+        }
+
+        //check if the provider name exists
+        allProviders = await Provider.read({email: body.email});
+        //if provider name exists, send message to client
+        if(allProviders.length > 0){
+            return res.send({"Message": "Provider email exists"});
+        }
+
+        //todo: maybe check address and phone?
+        
+
+        //set data for new provider
+        let newProviderInfo = {
+            name: body.name,
+            phone: body.phone,
+            email: body.email,
+            title: body.title,
+            type: body.type,
+            zip: body.zip,
+            address: body.address,
+            totalBeds: body.totalBeds,
+            bedsUsed: body.bedsUsed,
+            active: body.active
+        };
+
+        if(body.lat){
+            newProviderInfo.lat = body.lat;
+        }
+        if(body.long){
+            newProviderInfo.long = body.long;
+        }
+
+
+        //create provider
+        let provider = await Provider.create(newProviderInfo);
+
+        AuditEntry.addAuditEntry(req.user, req.body, "Create", "POST", "/providers", provider, "Provider");
+
+        res.send({"Message": "Provider created successfully", provider:provider});
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+});
+
+
+
+//update provider
+app.put("/providers/:providerId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        //get provider id
+        let providerId = req.params.providerId;
+
+
+        let requestedUser = req.user;
+        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, providerId);
+        if(!canMakeRequest){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+
+        let allProviders = await Provider.read({_id: providerId});
+        //check if provider exists
+        if(allProviders.length > 0){
+            let providerDoc = allProviders[0];
+
+            let body = req.body;
+            let currentBedsUsed = body.bedsUsed;
+            let previousBedsUsed = providerDoc.bedsUsed;
+
+
+            if(currentBedsUsed && currentBedsUsed != previousBedsUsed ){
+
+                let changeCount = currentBedsUsed - previousBedsUsed;
+
+                //add bed change to provider entries
+                const providerEntry = new ProviderEntry();
+                //get objectId to add to provider
+                const idToSearch = new mongoose.Types.ObjectId(providerDoc._id);
+                providerEntry.amountChanged = changeCount;
+                providerEntry.provider = idToSearch;
+                //add provider entry
+                await ProviderEntry.create(providerEntry);
+
+                await AuditEntry.addAuditEntry(req.user, req.body, "Create", "PUT", "/providers/:providerId", providerDoc, "ProviderEntry");
+
+            }
+
+            await AuditEntry.addAuditEntry(req.user, req.body, "Update", "PUT", "/providers/:providerId", providerDoc, "Provider");
+
+            let updateFields = body;
+            updateFields.updatedAt = Date.now();
+            let updatedProvider = await Provider.update(providerDoc, updateFields); 
+            res.send({"Message":"Updated Provider successfully", provider: updatedProvider});
+        }
+        else{
+            res.send({"Message":"Provider doesn't exist"});
+        }
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+
+
+/*************END PROVIDER ENDPOINTS*****************/
+
+
+
+
+/*************PROVIDER ENTRY ENDPOINTS*****************/
+
+//get all provider entries
+app.get("/providerEntries", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin && !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+        let propertiesToPopulate = ['provider'];
+        let allProviderEntries = await ProviderEntry.read(null, propertiesToPopulate);
+        res.send(allProviderEntries);
+        
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+//get all provider entries by providerId
+app.get("/providerEntries/:providerId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+
+        //get provider id
+        let providerId = req.params.providerId;
+
+        let requestedUser = req.user;
+        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, providerId);
+        if(!canMakeRequest){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+
+        let propertiesToPopulate = ['provider'];
+        let allProviderEntries = await ProviderEntry.read({provider: providerId}, propertiesToPopulate);
+
+        res.send(allProviderEntries);
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+
+
+//create provider entry
+// Updating provider inserts into provider entry,
+// but maybe server is down or something and you need to update data not accounted for
+app.post("/providerEntries", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        
+        //get body from the request
+        let body = req.body;
+
+        //set data for new provider entry
+        let newProviderInfo = {
+            amountChanged: body.amountChanged,
+            provider: body.provider,
+            createdAt: body.createdAt
+        };
+
+        //create provider entry
+        let providerEntry = await ProviderEntry.create(newProviderInfo);
+
+        res.send({"Message": "Provider Entry created successfully", providerEntry:providerEntry});
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+});
+
+
+
+
+/*************END PROVIDER ENTRY ENDPOINTS*****************/
+
+
+
+
+
+/*************MANAGING USER ENDPOINTS*****************/
+
+//get all managing users
+app.get("/managingUsers", passport.authenticate("jwt", {session:false}),  async(req, res) => {
+
+    try{
+        let propertiesToPopulate = ['provider', 'user'];
+
+        let requestedUser = req.user;
+
+        if(!requestedUser.superAdmin  && !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+        let allManagingUsers = await ManagingUser.read(null, propertiesToPopulate);
+        res.send(allManagingUsers);
+
+        
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+//get all managing users by provider id
+app.get("/managingUsers/provider/:providerId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        //get provider id
+        let providerId = req.params.providerId;
+
+        //get user that made the request
+        let propertiesToPopulate = ['provider', 'user'];
+
+        let requestedUser = req.user;
+        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, providerId);
+        if(!canMakeRequest){
+            return res.send({"Message": "Unauthorized"});
+        }
+        
+        let allManagingUsers = await ManagingUser.read({provider: providerId},propertiesToPopulate);
+        res.send(allManagingUsers);
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+//get  managing users by user id
+app.get("/managingUsers/user/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        //get user id
+        let userId = req.params.userId;
+
+        //get user that made the request
+        let requestedUser = req.user;
+
+        //check if requested user is super admin or actual user of the managing user
+        if( !requestedUser.superAdmin || !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+      
+        let propertiesToPopulate = ['provider', 'user'];
+        let allManagingUsers = await ManagingUser.read({user: userId},propertiesToPopulate);
+        res.send(allManagingUsers);
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+//get managing users by provider id and userId
+app.get("/managingUsers/provider/:providerId/user/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        //get provider id
+        let providerId = req.params.providerId;
+        //get user id
+        let userId = req.params.userId;
+
+        //get user that made the request
+        let requestedUser = req.user;
+        
+        //check if requested user is super admin or actual user of the managing user
+        if( !requestedUser.superAdmin && !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+        let propertiesToPopulate = ['provider', 'user'];
+        let allManagingUsers = await ManagingUser.read({provider: providerId, user: userId},propertiesToPopulate);
+        res.send(allManagingUsers);
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+
+
+//create managing user
+//would be called after create user endpoint is called and user type is set to 2
+//can be created by super admins or other managing user of the same provider
+app.post("/managingUsers",  passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+
+        //get body from the request
+        let body = req.body;
+        let provider = body.provider;
+        let user = body.user;
+        let active = body.active;
+        let requestedUser = req.user;
+
+        if(!user || !provider){
+            return res.send({"Message": "Missing Information"});
+        }
+        
+
+        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, provider);
+        if(!canMakeRequest){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+
+        let allManagingUsers = await ManagingUser.read({provider: provider, user: user});
+        if(allManagingUsers.length > 0){
+            return res.send({"Message": "Managing User Exists"});
+        }
+
+
+
+        //set data for new managing user
+        let newManagingUserInfo = {
+            user: user,
+            active: active,
+            provider: provider
+        };
+
+        //create managing user
+        let managingUser = await ManagingUser.create(newManagingUserInfo);
+
+        await AuditEntry.addAuditEntry(user, body, "Create", "POST", "/managingUsers", managingUser, "ManagingUser");
+
+        res.send({"Message": "Managing User created successfully", managingUser:managingUser});
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+});
+
+
+
+//update managing user
+//used to update managing users active status
+//active status is set to false when user no longer works for provider or user type gets to set a regular user
+//only let super admins and actual user of the managing user to make the request
+app.put("/managingUsers/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        //get user id
+        let userId = req.params.userId;
+        //get user that made the request
+        let requestedUser = req.user;
+
+       
+        
+        //check if managing user exists
+        let allManagingUsers = await ManagingUser.read({user: userId});
+        if(allManagingUsers.length > 0){
+            let managingUserDoc = allManagingUsers[0];
+
+
+            if(requestedUser.superAdmin){
+                if(!requestedUser.active){
+                    return res.send({"Message": "Unauthorized"});
+                }
+            }
+          
+            let updateFields = req.body;
+            updateFields.updatedAt = Date.now();
+            let updatedManagingUser = await ManagingUser.update(managingUserDoc, updateFields); 
+            res.send({"Message":"Updated Managing User successfully", provider: updatedManagingUser});
+        }
+        else{
+            res.send({"Message":"Managing User doesn't exist"});
+        }
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+/*************END MANAGING USER ENDPOINTS*****************/
+
+
+
+
+/*************AUDIT ENTRY ENDPOINTS*****************/
+
+//get all audit entries
+app.get("/auditEntries", passport.authenticate("jwt", {session:false}), async(req, res) => {
+    
+
+    try{
+
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin){
+            return res.send({"Message": "Unauthorized"});
+
+        }
+
+
+        let propertiesToPopulate = [ 'user', 'provider', 'providerEntry', 'managingUser', 'createdBy' ];
+        let allAuditEntries = await AuditEntry.read(null, propertiesToPopulate);
+        res.send(allAuditEntries);
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+//get all audit entries by providerId
+app.get("/auditEntries/providers/:providerId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        //get provider id
+        let providerId = req.params.providerId;
+
+
+        let requestedUser = req.user;
+        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, providerId);
+        if(!canMakeRequest){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+        let propertiesToPopulate = ['provider', 'createdBy'];
+        let allProviderEntries = await AuditEntry.read({provider: providerId}, propertiesToPopulate);
+
+        res.send(allProviderEntries);
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+//get all audit entries by userId
+app.get("/auditEntries/user/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    //todo: maybe let managing users access as well
+
+    try{
+
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin){
+            return res.send({"Message": "Unauthorized"});
+
+        }
+
+        //get user id
+        let userId = req.params.userId;
+        let propertiesToPopulate = [ 'user', 'provider', 'providerEntry', 'managingUser', 'createdBy' ];
+        let allProviderEntries = await AuditEntry.read({createdBy: userId}, propertiesToPopulate);
+
+        res.send(allProviderEntries);
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+
+
+
+
+/*************END AUDIT ENTRY ENDPOINTS*****************/

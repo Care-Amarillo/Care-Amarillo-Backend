@@ -4,20 +4,18 @@ import Entity from "./entity.js";
 
 export default class Provider extends Entity {
 
-x
 
     //provider schema
     static providerSchema = new mongoose.Schema({
         name: {type: "String", required: true},
-        lat: {type: "String", required: true},
-        long: {type: "String", required: true},
+        lat: {type: "String", default:"", required: false},
+        long: {type: "String",default:"", required: false},
         address: {type: "String", required: true},
         email: {type: "String", required:true}, 
         phone: {type: "String", required: true},
         title: {type: "String", required: true},
         zip: {type: "String",  required: true},
         type: {type: "Number", default:1, required: true},
-        timesUpdated: {type: "Number", default: 0, required: true},
         bedsUsed: {type: "Number", default: 0, required: true},
         totalBeds: {type: "Number", default: 0, required: true},
         createdAt: {type: "Date", default: Date.now, required: true},

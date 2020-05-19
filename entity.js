@@ -1,8 +1,7 @@
 export default class Entity {
-    // This Entity class will serve as the parent class for all model-like children classes (in this case, Person).
+    // This Entity class will serve as the parent class for all model-like children classes 
 
-    // define the 4 CRUD functions as statically available properties
-    // Deifne a create function
+    //  create function
     static async create(theProperties) {
         // Assume that theProperties parameter is a JSON object containing the properties to use in creating a document
         try {
@@ -19,15 +18,15 @@ export default class Entity {
         }
     }
 
-    // Define read
+    // read
     static async read(filter, relationshipsToPopulate) {
         // filter is a json object to actually filter model.find()
         // relationshipsToPopulate is an array of the names of teh properties that contain teh linking relationships for this model.
         try {
                 let query = null;   // this will hold the Query object returned from find()
                 // Handle the situation where filter is available.
-                if(filter) {    // checking to see if filter is define (that is, something is passed into it)
-                    query = this.model.find(filter);    // No matter what, the docuemnts that will eventually come out of a find() query will be in an array, even if it is an array of 0 docs.
+                if(filter) {    
+                    query = this.model.find(filter);    
                 } else {
                     query = this.model.find();
                 }

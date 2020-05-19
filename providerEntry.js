@@ -10,8 +10,8 @@ export default class ProviderEntry extends Entity {
     static providerEntrySchema = new mongoose.Schema({
         amountChanged: {type: "Number", default: 0, required: true},
         provider: {type: mongoose.Schema.Types.ObjectId, ref:'Provider', required: true},
-        createdAt: {type: "Date", default: Date.now, required: true},
-        updatedAt: {type: "Date", default: Date.now, required: true}
+        createdAt: {type: "Date", default: Date.now, required: true}
+       
 
     });
 
