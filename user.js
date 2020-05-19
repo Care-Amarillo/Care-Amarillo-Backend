@@ -19,7 +19,7 @@ export default class User extends Entity {
         title: {type: "String", required: true},
         pushId: {type: "String", default:"", required: false},
         password: {type: "String", required: true},
-        salt: {type: "String", required: true},
+        salt: {type: "String", required: false},
         admin: {type: "Boolean", default: false, required: true},
         superAdmin: {type: "Boolean", default: false, required: true},
         userType: {type: "Number", default:1, required: true},

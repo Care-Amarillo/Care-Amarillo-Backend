@@ -1,0 +1,199 @@
+
+
+// create super admin
+// POST
+// http://localhost:3000/users
+//body :
+{
+  "admin": false,
+  "superAdmin": true,
+  "userType": 3,
+  "active": true,
+  "fName": "Tommy",
+  "lName": "Johnson",
+  "email": "tester@amarillocollege.com",
+  "phone": "8062345383",
+  "title": "Super Admin",
+  "password": "test"
+}
+
+
+// authenticate user
+// POST
+// http://localhost:3000/users/authenticate
+// body:
+{
+  "email": "tester@amarillocollege.com",
+  "password": "test"
+}
+
+
+// update user password 
+// PUT
+//requires auth token
+// http://localhost:3000/users/updatePassword/userId
+// body: 
+{
+  "password": "tester"
+}
+
+
+
+// authenticate user again
+// POST
+// get new auth token for future requests
+// http://localhost:3000/users/authenticate
+//body:
+{
+  "email": "tester@amarillocollege.com",
+  "password": "tester"
+}
+
+
+// get user by id
+//GET
+// http://localhost:3000/users/userId
+
+
+
+// get all users
+// only super admins can access all users
+// GET
+// http://localhost:3000/users
+
+
+// update user
+// must be authenticated to update user
+// only the actual user or super admin can update a user
+// PUT
+// http://localhost:3000/users/userId
+// body:
+{
+  "fName": "Tammeo",
+  "title": "Admin"
+}
+
+
+/*************************************************************************/
+// get all providers
+// everyone can read all providers
+// GET
+// http://localhost:3000/providers
+
+
+
+// get provider by providerId (ObjectID)
+// everyone can read provider
+// GET
+// http://localhost:3000/providers/:providerId
+
+
+
+// create provider
+// only an active, super admin can create a provider
+// POST
+// body:
+{
+    "name": "test provider",
+    "lat": "0.0",
+    "long": "0.0",
+    "phone": "2928883333",
+    "email": "chris@gmail.com",
+    "title": "provider title or slogan",
+    "type": 2,
+    "zip": "79109",
+    "address": "2222 n western",
+    "totalBeds": 32,
+    "bedsUsed": 3,
+    "active": true
+}
+
+
+//update provider
+// only active super admins or active managing users of the provider can update.
+// if beds used is updated, provider entry is made
+// PUT
+// http://localhost:3000/providers/:providerId
+// body:
+{
+    "bedsUsed": 13,
+    "title": "The best provider"
+}
+
+
+
+/*************************************************************************/
+// get all provider entries
+// only active super admins or active managing users of the provider can read.
+// GET
+// http://localhost:3000/providerEntries
+
+
+
+// get provider entries by providerId (ObjectID)
+// only active super admins or active managing users of the provider can read.
+// GET
+// http://localhost:3000/providerEntries/:providerId
+
+
+/*************************************************************************/
+// get all managing users
+// only active super admins can read.
+// GET
+// http://localhost:3000/managingUsers
+
+
+
+// get managing users by providerId (ObjectID)
+// only active super admins can read.
+// GET
+// http://localhost:3000/managingUsers/provider/:providerId
+
+
+// get managing users by userId (ObjectID)
+// only active super admins can read.
+// GET
+// http://localhost:3000/managingUsers/user/:userId
+
+
+//create managing user
+// only active super admins or active managing users of the provider can read. 
+// POST
+// http://localhost:3000/managingUser
+// body:
+{
+	"user": "5ec3043dff7be00ff6aaa3a0",   
+	"provider": "5ec2f9cb414c5d0408efea97",
+	"active": true
+}
+
+
+// update managing user 
+// used for changing managing user status
+// only super admins can change managing user status
+// PUT
+// http://localhost:3000/managingUsers/:userId
+// body:
+{
+	"active": false
+}
+
+
+/*************************************************************************/
+// get all audit entries 
+// only active super admins can read.
+// GET
+// http://localhost:3000/auditEntries
+
+
+
+// get audit entries by providerId (ObjectID)
+// only active super admins can read.
+// GET
+// http://localhost:3000/auditEntries/providers/:providerId
+
+
+// get audit entries by userId (ObjectID)
+// only active super admins can read.
+// GET
+// http://localhost:3000/auditEntries/user/:userId
