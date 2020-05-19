@@ -17,7 +17,7 @@ export default class User extends Entity {
         email: {type: "String", required:true}, 
         phone: {type: "String", required: false},
         title: {type: "String", required: true},
-        pushId: {type: "String", default:"", required: false},
+        pushId: {type: "String", default:"", required: false}, //for targeted push notifications
         password: {type: "String", required: true},
         salt: {type: "String", required: false},
         admin: {type: "Boolean", default: false, required: true},
@@ -29,11 +29,37 @@ export default class User extends Entity {
 
     });
 
+
+    //chekc if its the actual user making the request or a super admin
+    static async checkIfValidUserForRequest(requestedUser, userId){
+        let isValid = true; 
+        console.log("requested user is " + JSON.stringify(requestedUser));
+        console.log("userId sent is " + JSON.stringify(userId));
+        if(!requestedUser.superAdmin){
+            console.log("is not super admin")
+            if(requestedUser._id.toString() !== userId  ){
+                console.log("user id dont match");
+                isValid = false;
+            }
+            else{
+                console.log("user ids match");
+            }
+        }
+        else if(!requestedUser.active){
+            console.log("super admin but not active")
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    //check if this is a valid email
     static async validEmail(email){
-        var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        let re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
         return re.test(String(email).toLowerCase());
     }
 
+    //check if this is a valid phone number
     static async validPhone(phoneNumber){
         let validPhone = false; 
         let re = /\D+/g;

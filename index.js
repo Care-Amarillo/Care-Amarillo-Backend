@@ -7,15 +7,16 @@ import './passport.js';
 import passport from 'passport';
 import JWT from 'jsonwebtoken';
 
+//import model classes
 import Provider from './provider.js';
 import User from './user.js';
 import ProviderEntry from './providerEntry.js';
 import ManagingUser from './managingUser.js';
+import AuditEntry from './auditEntry.js';
 
 
 import express from 'express';
 import bodyParser from 'body-parser';
-import AuditEntry from './auditEntry.js';
 
 mongoose.Promise = global.Promise;
 
@@ -42,6 +43,7 @@ app.get("/users", passport.authenticate("jwt", {session:false}),  async(req, res
     try{
 
         let requestedUser = req.user;
+        //only allow super admins to access all users
         if(!requestedUser.superAdmin){
             return res.send({"Message": "Unauthorized"});
         }
@@ -71,6 +73,7 @@ app.get("/users/:userId", passport.authenticate("jwt", {session:false}), async(r
             let userDoc = allUsers[0];
 
             let newModel = {}
+            //remove password and salt
             for(let [key, value] of Object.entries(userDoc.toJSON())) {
                 if(key == "password" || key == "salt") continue;
                 newModel[key] = value;
@@ -138,11 +141,11 @@ app.put("/users/updatePassword/:userId", passport.authenticate("jwt", {session:f
         let requestedUser = req.user;
         let userId = req.params.userId;
         
-        
-
-        if(requestedUser._id.toString() !== userId || !requestedUser.superAdmin || !requestedUser.active){
+        let validUser = await User.checkIfValidUserForRequest(requestedUser, userId);
+        if(!validUser){
             return res.send({"Message": "Unauthorized"});
         }
+        
        
         //get body from the request
         let body = req.body;
@@ -168,6 +171,7 @@ app.put("/users/updatePassword/:userId", passport.authenticate("jwt", {session:f
              //add audit entry before saving 
              AuditEntry.addAuditEntry(req.user, updateFields, "Update", "PUT", "/users/password/:userId", userDoc, "User");
 
+             //update user
              let updatedUser = await User.update(userDoc, updateFields); 
  
  
@@ -212,11 +216,13 @@ app.post("/users", async(req, res) => {
            } 
 
 
+           //validate phone
         let validPhone = await User.validPhone(body.phone);
         if(!validPhone){
             return res.send({"Message": "Invalid Phone Number"});
         }
 
+           //validate email
         let validEmail = await User.validEmail(body.email);
         if(!validEmail){
             return res.send({"Message": "Invalid Email"});
@@ -225,6 +231,7 @@ app.post("/users", async(req, res) => {
         //check if the user email exists
         let allUsers = await User.read({email: body.email});
 
+        //dont allow user to be created more than once
         if(allUsers.length > 0){
             return res.send({"Message": "User exists"});
         }
@@ -235,16 +242,7 @@ app.post("/users", async(req, res) => {
         let salt = encryptedPasswordAndSalt.salt;
 
 
-        //only let a super admin create a super admin
-        // if(body.userType === 3){
-        //     if(requestedUser.userType !== 3){
-        //         return res.send("Message", "Unauthorized");
-        //     }
-        // }
-
-
-       
-       
+      
 
         //set data for new user
         let newUserInfo = {
@@ -289,12 +287,13 @@ app.put("/users/:userId", passport.authenticate("jwt", {session:false}), async(r
         let userId = req.params.userId;
         let allUsers = await User.read({_id: userId});
 
-        
+        let requestedUser = req.user; 
 
-        let requestedUser = req.user;
-        if(requestedUser._id.toString() !== userId || !requestedUser.superAdmin || !requestedUser.active){
-            return res.send("Message", "Unauthorized");
+        let validUser = await User.checkIfValidUserForRequest(requestedUser, userId);
+        if(!validUser){
+            return res.send({"Message": "Unauthorized"});
         }
+
         
         //check if user exists
         if(allUsers.length > 0){
@@ -305,6 +304,7 @@ app.put("/users/:userId", passport.authenticate("jwt", {session:false}), async(r
             //add audit entry before saving 
             AuditEntry.addAuditEntry(req.user, req.body, "Update", "PUT", "/users/:userId", userDoc, "User");
 
+            //update user
             let updatedUser = await User.update(userDoc, updateFields); 
 
 
