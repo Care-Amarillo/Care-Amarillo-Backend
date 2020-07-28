@@ -13,10 +13,10 @@ import User from './user.js';
 import ProviderEntry from './providerEntry.js';
 import ManagingUser from './managingUser.js';
 import AuditEntry from './auditEntry.js';
-
-
+import cors from 'cors';
 import express from 'express';
 import bodyParser from 'body-parser';
+import url from 'url';
 
 mongoose.Promise = global.Promise;
 
@@ -27,7 +27,8 @@ const app = express();
 const port = 3000;
 
 app.use( bodyParser.json() );
-app.use( bodyParser.urlencoded() );
+app.use( cors() );
+app.use(bodyParser.urlencoded({ extended: true }));
 
 //listen on specified port
 app.listen(port, () => {
@@ -98,6 +99,7 @@ app.get("/users/:userId", passport.authenticate("jwt", {session:false}), async(r
 
 //authenticate user
 app.post("/users/authenticate", async(req, res) => {
+
 
     try{
        
@@ -198,6 +200,7 @@ app.put("/users/updatePassword/:userId", passport.authenticate("jwt", {session:f
 
 //create user
 app.post("/users", async(req, res) => {
+
 
     try{
 
@@ -342,8 +345,29 @@ app.put("/users/:userId", passport.authenticate("jwt", {session:false}), async(r
 //anonymous user will need to look up providers
 app.get("/providers" , async(req, res) => {
 
+    const queryObject = url.parse(req.url,true).query;
+    const searchQuery = queryObject.searchQuery;
+
     try{
-        let allProviders = await Provider.read();
+        //let allProviders = await Provider.read();
+        let allProviders = await Provider.read({name:{$regex:searchQuery,$options:'i'}});
+        res.send(allProviders);
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+app.get("/providersActive" , async(req, res) => {
+
+    const queryObject = url.parse(req.url,true).query;
+    const searchQuery = queryObject.searchQuery;
+
+    try{
+        //let allProviders = await Provider.read();
+        let allProviders = await Provider.read({active:true, name:{$regex:searchQuery,$options:'i'}});
         res.send(allProviders);
     }
     catch(error){
@@ -385,21 +409,20 @@ app.get("/providers/:providerId", async(req, res) => {
 //create provider using super admin
 app.post("/providers", passport.authenticate("jwt", {session:false}), async(req, res) => {
 
+
     try{
         
         //get body from the request
         let body = req.body;
+	    console.log("req.body " + JSON.stringify(req.body));
 
         if(
             !body.name ||
             !body.phone ||
             !body.email ||
             !body.title ||
-            !body.type ||
             !body.zip ||
-            !body.address ||
-            !body.totalBeds ||
-            !body.bedsUsed 
+            !body.address 
         )
         {
             return res.send({"Message": "Missing Data"});
@@ -427,9 +450,9 @@ app.post("/providers", passport.authenticate("jwt", {session:false}), async(req,
 
         let requestedUser = req.user;
 
-        if(!requestedUser.superAdmin && !requestedUser.active){
-            return res.send({"Message": "Unauthorized"});
-        }
+        //if(!requestedUser.superAdmin && !requestedUser.active){
+         //   return res.send({"Message": "Unauthorized"});
+       // }
 
         //check if the provider name exists
         let allProviders = await Provider.read({name: body.name});
@@ -456,6 +479,7 @@ app.post("/providers", passport.authenticate("jwt", {session:false}), async(req,
             title: body.title,
             type: body.type,
             zip: body.zip,
+            place_id: body.place_id,
             address: body.address,
             totalBeds: body.totalBeds,
             bedsUsed: body.bedsUsed,
@@ -475,7 +499,64 @@ app.post("/providers", passport.authenticate("jwt", {session:false}), async(req,
 
         AuditEntry.addAuditEntry(req.user, req.body, "Create", "POST", "/providers", provider, "Provider");
 
-        res.send({"Message": "Provider created successfully", provider:provider});
+
+        //if(!user || !provider){
+       //     return res.send({"Message": "Missing Information"});
+      //  }
+
+
+     //   let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, provider);
+     //   if(!canMakeRequest){
+      //      return res.send({"Message": "Unauthorized"});
+      //  }
+
+
+    //    let allManagingUsers = await ManagingUser.read({provider: provider, user: user});
+    //    if(allManagingUsers.length > 0){
+    //        return res.send({"Message": "Managing User Exists"});
+    //    }
+
+
+        console.log("requested user: " + JSON.stringify(requestedUser));
+
+        //set data for new managing user
+        let newManagingUserInfo = {
+            user: requestedUser._id,
+            active: true,
+            provider: provider._id
+        };
+
+        //create managing user
+        let managingUser = await ManagingUser.create(newManagingUserInfo);
+
+        let allUsers = await User.read({_id: requestedUser._id});
+	let userDocToUpdate = allUsers[0]; 
+	let updateFields = {};
+	for(let [key, value] of Object.entries(requestedUser)) {
+            if(key == "salt" || key == "password") continue;
+	    updateFields[key] = value;
+	}
+	updateFields.updatedAt = Date.now();
+	updateFields.admin = true;
+
+	console.log("user to update: " + JSON.stringify(userDocToUpdate));
+	console.log("user update fields: " + JSON.stringify(updateFields));
+
+
+	//update user
+	let updatedUser = await User.update(userDocToUpdate, updateFields);
+
+
+	let cleanUpdatedUser = {}
+	for(let [key, value] of Object.entries(updatedUser.toJSON())) {
+	    if(key == "password" || key == "salt") continue;
+	    cleanUpdatedUser[key] = value;
+	}
+
+
+     //   await AuditEntry.addAuditEntry(user, body, "Create", "POST", "/managingUsers", managingUser, "ManagingUser");
+
+        res.send({"Message": "Provider created successfully", provider:provider, updatedUser: cleanUpdatedUser});
     }
     catch(error){
         console.log(error);
@@ -558,14 +639,65 @@ app.put("/providers/:providerId", passport.authenticate("jwt", {session:false}),
 //get all provider entries
 app.get("/providerEntries", passport.authenticate("jwt", {session:false}), async(req, res) => {
 
+
     try{
         let requestedUser = req.user;
         if(!requestedUser.superAdmin && !requestedUser.active){
             return res.send({"Message": "Unauthorized"});
         }
 
+        const queryObject = url.parse(req.url,true).query;
+        console.log(queryObject);
+	
+        let startDate = queryObject.startDate;
+        let endDate = queryObject.endDate;
+
         let propertiesToPopulate = ['provider'];
-        let allProviderEntries = await ProviderEntry.read(null, propertiesToPopulate);
+        let allProviderEntries = await ProviderEntry.read({ createdAt: {"$gte":  startDate, "$lt":  endDate}}, propertiesToPopulate);
+     
+
+        res.send(allProviderEntries);
+        
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+//get all provider entries between two dates
+app.get("/providerEntriesByDate/:providerId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+
+    try{
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin && !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+
+        //get provider id
+        let providerId = req.params.providerId;
+
+        //let requestedUser = req.user;
+       // let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, providerId);
+      //  if(!canMakeRequest){
+       //     return res.send({"Message": "Unauthorized"});
+
+        const queryObject = url.parse(req.url,true).query;
+        console.log(queryObject);
+	
+        let startDate = queryObject.startDate;
+        let endDate = queryObject.endDate;
+	console.log("start date is :" + queryObject.startDate);
+	console.log("end date is :" + queryObject.endDate);
+	console.log("current date is :" + new Date().toISOString());
+
+        let propertiesToPopulate = ['provider'];
+        let allProviderEntries = await ProviderEntry.read({ createdAt: {"$gte":  startDate, "$lt":  endDate}}, propertiesToPopulate);
+     
         res.send(allProviderEntries);
         
     }
@@ -579,6 +711,7 @@ app.get("/providerEntries", passport.authenticate("jwt", {session:false}), async
 
 //get all provider entries by providerId
 app.get("/providerEntries/:providerId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
 
     try{
 
@@ -711,7 +844,8 @@ app.get("/managingUsers/user/:userId", passport.authenticate("jwt", {session:fal
         let requestedUser = req.user;
 
         //check if requested user is super admin or actual user of the managing user
-        if( !requestedUser.superAdmin || !requestedUser.active){
+        //if( !requestedUser.superAdmin || !requestedUser.active){
+        if(  !requestedUser.active){
             return res.send({"Message": "Unauthorized"});
         }
 
@@ -802,7 +936,7 @@ app.post("/managingUsers",  passport.authenticate("jwt", {session:false}), async
         //create managing user
         let managingUser = await ManagingUser.create(newManagingUserInfo);
 
-        await AuditEntry.addAuditEntry(user, body, "Create", "POST", "/managingUsers", managingUser, "ManagingUser");
+        await AuditEntry.addAuditEntry(req.user, body, "Create", "POST", "/managingUsers", managingUser, "ManagingUser");
 
         res.send({"Message": "Managing User created successfully", managingUser:managingUser});
     }
@@ -876,9 +1010,18 @@ app.get("/auditEntries", passport.authenticate("jwt", {session:false}), async(re
 
         }
 
+	const queryObject = url.parse(req.url,true).query;
+        console.log(queryObject);
+	
+        let startDate = queryObject.startDate;
+        let endDate = queryObject.endDate;
+	console.log("start date is :" + queryObject.startDate);
+	console.log("end date is :" + queryObject.endDate);
+	console.log("current date is :" + new Date().toISOString());
+
 
         let propertiesToPopulate = [ 'user', 'provider', 'providerEntry', 'managingUser', 'createdBy' ];
-        let allAuditEntries = await AuditEntry.read(null, propertiesToPopulate);
+        let allAuditEntries = await AuditEntry.read({ createdAt: {"$gte":  startDate, "$lt":  endDate}}, propertiesToPopulate);
         res.send(allAuditEntries);
     }
     catch(error){
@@ -891,6 +1034,7 @@ app.get("/auditEntries", passport.authenticate("jwt", {session:false}), async(re
 
 //get all audit entries by providerId
 app.get("/auditEntries/providers/:providerId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
 
     try{
         //get provider id
@@ -919,6 +1063,7 @@ app.get("/auditEntries/providers/:providerId", passport.authenticate("jwt", {ses
 
 //get all audit entries by userId
 app.get("/auditEntries/user/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
 
     //todo: maybe let managing users access as well
 

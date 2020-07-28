@@ -10,6 +10,7 @@ export default class Provider extends Entity {
         name: {type: "String", required: true},
         lat: {type: "String", default:"", required: false},
         long: {type: "String",default:"", required: false},
+        place_id: {type: "String",default:"", required: false},
         address: {type: "String", required: true},
         email: {type: "String", required:true}, 
         phone: {type: "String", required: true},
