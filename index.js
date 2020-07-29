@@ -18,6 +18,8 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import url from 'url';
 
+import axios from "axios";
+
 mongoose.Promise = global.Promise;
 
 
@@ -133,6 +135,73 @@ app.post("/users/authenticate", async(req, res) => {
     }
 
 });
+
+
+
+//update user pushId
+app.put("/users/updatePushId/:userId", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        
+        let requestedUser = req.user;
+        let userId = req.params.userId;
+        
+        let validUser = await User.checkIfValidUserForRequest(requestedUser, userId);
+        if(!validUser){
+            return res.send({"Message": "Unauthorized"});
+        }
+        
+       
+        //get body from the request
+        let body = req.body;
+
+        let allUsers = await User.read({_id: userId});
+
+        if(allUsers.length > 0){
+            let userDoc = allUsers[0];
+            //generate salt and encrypted password for the user
+            let encryptedPasswordAndSalt = await User.generateHash(body.password);
+            let encryptedPassword = encryptedPasswordAndSalt.encryptedString;
+            let salt = encryptedPasswordAndSalt.salt;
+
+	    let pushId = body.pushId;
+
+             //set data for new password
+            let updateFields = {
+                pushId: pushId,
+                updatedAt: Date.now()
+            };
+
+            
+
+             //add audit entry before saving 
+             //AuditEntry.addAuditEntry(req.user, updateFields, "Update", "PUT", "/users/password/:userId", userDoc, "User");
+
+             //update user
+             let updatedUser = await User.update(userDoc, updateFields); 
+ 
+ 
+             let cleanUpdatedUser = {}
+             for(let [key, value] of Object.entries(updatedUser.toJSON())) {
+                 if(key == "password" || key == "salt") continue;
+                 cleanUpdatedUser[key] = value;
+             }
+ 
+             //send update user response
+             res.send({"Message":"Updated User successfully", user: cleanUpdatedUser});
+        }
+        else{
+            res.send({"Message":"User doesn't exist"});
+        }
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+});
+
+
 
 
 //update user password
@@ -696,7 +765,7 @@ app.get("/providerEntriesByDate/:providerId", passport.authenticate("jwt", {sess
 	console.log("current date is :" + new Date().toISOString());
 
         let propertiesToPopulate = ['provider'];
-        let allProviderEntries = await ProviderEntry.read({ createdAt: {"$gte":  startDate, "$lt":  endDate}}, propertiesToPopulate);
+        let allProviderEntries = await ProviderEntry.read({ createdAt: {"$gte":  startDate, "$lt":  endDate}, provider: providerId}, propertiesToPopulate);
      
         res.send(allProviderEntries);
         
@@ -1096,3 +1165,76 @@ app.get("/auditEntries/user/:userId", passport.authenticate("jwt", {session:fals
 
 
 /*************END AUDIT ENTRY ENDPOINTS*****************/
+
+
+/*************START PUSH ENDPOINTS*****************/
+app.post("/push/globalPush", passport.authenticate("jwt", {session:false}), async(req, res) => {
+
+    try{
+        //get user that made the request
+        let requestedUser = req.user;
+
+        let body = req.body;
+
+        //get title
+        let title = body.title;
+        let message = body.message;
+
+
+        //only allow super admins to access all users
+        if(!requestedUser.superAdmin){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+        let allUsers = await User.read();
+
+
+	for(let i = 0; i < allUsers.length; i++) {
+	    let userObj = allUsers[i];
+	    let pushId = userObj["pushId"];
+
+	    if(pushId === "") continue;
+
+	    let data = {
+	      "to": pushId,
+	      "priority": "high",
+	      "notification": {
+		"body": message,
+		"title": title
+	      }
+	    };
+
+        //todo: move to function and put key in env
+        //todo: use fcm topics instead of looping through pushIds
+	   
+
+	    const config = {
+		"Content-Type": "application/json;charset=utf-8",
+		"Authorization": 'key=AAAAa36sOCs:APA91bFJKGEJ1h4wdNb6i6HWHDxNlISj1vIefEI1eJW5q8_CyfljiNmV1v2-wLFjWZdI1pj4RwRbs4i0dQt0FDCwtgEpOE5JYJc_e5AlR4RrvUDFvEK8d0m5EEKmLnexWQ266nfSKEL4'
+            };
+	    const response = await axios({
+		method: 'post',
+		url: 'https://fcm.googleapis.com/fcm/send',
+		data: data,
+		headers: config
+     	    });
+	    console.log("reponse is " + JSON.stringify(response.data));
+
+        }
+
+
+
+        res.send({"Message":"Sent push successfully"});
+
+
+    }
+    catch(error){
+        console.log(error);
+        res.send(error);
+    }
+
+});
+/*************END PUSH ENDPOINTS*****************/
+
+
+
