@@ -1206,11 +1206,12 @@ app.post("/push/globalPush", passport.authenticate("jwt", {session:false}), asyn
 
         //todo: move to function and put key in env
         //todo: use fcm topics instead of looping through pushIds
+            let key = "";
 	   
 
 	    const config = {
 		"Content-Type": "application/json;charset=utf-8",
-		"Authorization": 'key=AAAAa36sOCs:APA91bFJKGEJ1h4wdNb6i6HWHDxNlISj1vIefEI1eJW5q8_CyfljiNmV1v2-wLFjWZdI1pj4RwRbs4i0dQt0FDCwtgEpOE5JYJc_e5AlR4RrvUDFvEK8d0m5EEKmLnexWQ266nfSKEL4'
+		"Authorization": `key=${key}`	
             };
 	    const response = await axios({
 		method: 'post',
