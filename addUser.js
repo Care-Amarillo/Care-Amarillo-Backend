@@ -31,6 +31,12 @@ const main = async() => {
             "password": "test"
           }
 
+        let encryptedPasswordAndSalt = await User.generateHash("test");
+        let encryptedPassword = encryptedPasswordAndSalt.encryptedString;
+        let salt = encryptedPasswordAndSalt.salt;
+        user.password = encryptedPassword;
+        user.salt = salt;
+
         //call addUser to save the new usser to the database
         await User.create(user);
 
