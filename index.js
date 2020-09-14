@@ -44,22 +44,51 @@ app.listen(port, () => {
 app.get("/users", passport.authenticate("jwt", {session:false}),  async(req, res) => {
 
     try{
-
+        //set variable to show if user has superAdmin rights
         let requestedUser = req.user;
         //only allow super admins to access all users
         if(!requestedUser.superAdmin){
             return res.send({"Message": "Unauthorized"});
         }
 
+        //per request pull all user info from database
         let allUsers = await User.read();
+
+        //create new array to store filtered user information objects from request
+        let filteredAllUsers = [];
        
-        res.send(allUsers);
+        //loop through allUsers array and build filteredAllUsers array after removing sensative information.
+        for(let i = 0; i<allUsers.length; i++){
+            //create new objects for user removing sensative information
+            //this info will be sent to endpoint request so can be filtered down more if needed
+            let tempFilteredUser = {
+                pushId: allUsers[i].pushId,
+                admin: allUsers[i].admin,
+                superAdmin: allUsers[i].superAdmin,
+                userType: allUsers[i].userType,
+                active: allUsers[i].active,
+                _id: allUsers[i]._id,
+                createdAt: allUsers[i].createdAt,
+                updatedAt: allUsers[i].updatedAt,
+                fName: allUsers[i].fName,
+                lName: allUsers[i].lName,
+                email: allUsers[i].email,
+                phone: allUsers[i].phone,
+                title: allUsers[i].title
+            }
+
+            //console.log(tempFilteredUser);
+            //push filter user information into new array to send to frontend
+            filteredAllUsers.push(tempFilteredUser);
+        }
+            
+        //send request back to frontend with filtered user information
+        res.send(filteredAllUsers);
     }
     catch(error){
         console.log(error);
         res.send(error);
     }
-
 });
 
 
@@ -121,8 +150,9 @@ app.post("/users/authenticate", async(req, res) => {
                 if(error){
                     res.send(error);
                 }
-                //generate JWT token
-                const token = JWT.sign(user, "7dV4J9Y85u35P!mb4hT2brQ2ikXMYp^%f1h");
+                //generate JWT token               
+                //added expiresIn time for token validation.  passport will look at this before any operation
+                const token = JWT.sign(user, "7dV4J9Y85u35P!mb4hT2brQ2ikXMYp^%f1h", {expiresIn: '30m'});
                 return res.json({ user, token});
 
             });
