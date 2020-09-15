@@ -840,34 +840,6 @@ app.get("/providerEntries/:providerId", passport.authenticate("jwt", {session:fa
 
 
 
-//create provider entry
-// Updating provider inserts into provider entry,
-// but maybe server is down or something and you need to update data not accounted for
-app.post("/providerEntries", passport.authenticate("jwt", {session:false}), async(req, res) => {
-
-    try{
-        
-        //get body from the request
-        let body = req.body;
-
-        //set data for new provider entry
-        let newProviderInfo = {
-            amountChanged: body.amountChanged,
-            provider: body.provider,
-            createdAt: body.createdAt
-        };
-
-        //create provider entry
-        let providerEntry = await ProviderEntry.create(newProviderInfo);
-
-        res.send({"Message": "Provider Entry created successfully", providerEntry:providerEntry});
-    }
-    catch(error){
-        console.log(error);
-        res.send(error);
-    }
-});
-
 
 
 
