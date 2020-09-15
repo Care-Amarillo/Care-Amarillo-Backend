@@ -942,13 +942,12 @@ app.get("/managingUsers/user/:userId", passport.authenticate("jwt", {session:fal
         //get user that made the request
         let requestedUser = req.user;
 
-        //check if requested user is super admin or actual user of the managing user
-        //if( !requestedUser.superAdmin || !requestedUser.active){
-        if(  !requestedUser.active){
+
+        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, provider);
+        if(!canMakeRequest){
             return res.send({"Message": "Unauthorized"});
         }
 
-      
         let propertiesToPopulate = ['provider', 'user'];
         let allManagingUsers = await ManagingUser.read({user: userId},propertiesToPopulate);
         res.send(allManagingUsers);
