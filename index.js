@@ -152,8 +152,8 @@ app.post("/users/authenticate", async (req, res) => {
                 }
                 //generate JWT token               
                 //added expiresIn time for token validation.  passport will look at this before any operation
-                const token = JWT.sign(user, "7dV4J9Y85u35P!mb4hT2brQ2ikXMYp^%f1h", { expiresIn: '30m' });
-                return res.json({ user, token });
+                const token = JWT.sign(user, process.env.JWT_KEY_OR_SECRET, {expiresIn: '30m'});
+                return res.json({ user, token});
 
             });
 
@@ -1533,18 +1533,16 @@ app.post("/push/globalPush", passport.authenticate("jwt", { session: false }), a
             //todo: use fcm topics instead of looping through pushIds
             let key = "";
 
-
-            const config = {
-                "Content-Type": "application/json;charset=utf-8",
-                "Authorization": `key=${key}`
-            };
+	           const config = {
+		             "Content-Type": "application/json;charset=utf-8",
+		             "Authorization": `key=${process.env.FCM_API_KEY}`	
+             };
             const response = await axios({
                 method: 'post',
                 url: 'https://fcm.googleapis.com/fcm/send',
                 data: data,
                 headers: config
             });
-            console.log("reponse is " + JSON.stringify(response.data));
 
         }
 
