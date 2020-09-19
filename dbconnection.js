@@ -3,8 +3,8 @@ import { truncate } from "fs";
 
 class DBConnection {
     constructor() {
-        const mongoDBUrl = "localhost";
-        const mongoDBPort = "27017";
+        const mongoDBUrl = process.env.MONGO_URL;
+        const mongoDBPort = process.env.MONGO_PORT;
         const mongoDBDatabase = "CareAmarilloDB";
 
         const connectionInfo = `mongodb://${mongoDBUrl}:${mongoDBPort}/${mongoDBDatabase}`;

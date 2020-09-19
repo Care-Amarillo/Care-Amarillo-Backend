@@ -26,7 +26,7 @@ mongoose.Promise = global.Promise;
 
 const app = express();
 
-const port = 3000;
+const port = process.env.EXPRESS_PORT;
 
 app.use(bodyParser.json());
 app.use(cors());
