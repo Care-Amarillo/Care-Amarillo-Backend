@@ -11,6 +11,7 @@ import JWT from 'jsonwebtoken';
 import Provider from './provider.js';
 import User from './user.js';
 import ProviderEntry from './providerEntry.js';
+import ServicesOffered from './servicesoffered.js';
 import ManagingUser from './managingUser.js';
 import AuditEntry from './auditEntry.js';
 import cors from 'cors';
@@ -1528,3 +1529,203 @@ app.post("/push/globalPush", passport.authenticate("jwt", { session: false }), a
 
 
 
+/*************SERVICES OFFERED ENDPOINTS*****************/
+
+//Make endpoint that will create servicesoffered
+app.post("/servicesoffered", passport.authenticate("jwt", { session: false}), async(req, res) => {
+
+    try{ 
+
+        let requestedUser = req.user;
+
+        let providerId = req.body.providerId;
+        if(!providerId){
+            return res.send({"Message": "Missing Provider"});
+        }
+
+        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, providerId);
+        if(!canMakeRequest){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+	//check to see if Servicesoffered info came through POST
+	if( req.body.AvailableBeds
+	    && req.body.TotalBeds
+	    && req.body.VolunteerOpportunities
+	    && req.body.VolunteersNeeded
+	    && req.body.ServiceType
+	    && req.body.ServicesDescription
+	    && req.body.CriteriaForService
+	    && req.body.WarmingStation
+	    && req.body.CoolingStation
+	    )
+	{
+
+
+	    let newServicesOfferedInfo = {
+		AvailableBeds:  req.body.AvailableBeds,
+		TotalBeds: req.body.TotalBeds,
+		VolunteerOpportunities: req.body.VolunteerOpportunities,
+		VolunteersNeeded: req.body.VolunteersNeeded,
+		ServiceType: req.body.ServiceType,
+		ServicesDescription: req.body.ServicesDescription,
+		CriteriaForService: req.body.CriteriaForService,
+		WarmingStation: req.body.WarmingStation,
+		CoolingStation: req.body.CoolingStation,
+		Provider: providerId
+	    }
+
+	    //now we create ServicesOffered doc and store in database
+	    let newServicesOffered = await ServicesOffered.create(newServicesOfferedInfo);
+
+            AuditEntry.addAuditEntry(requestedUser, newServicesOfferedInfo, "Create", "POST", "/servicesoffered", null, "ServicesOffered");
+
+	    res.send({Message: "ServicesOffered created successfully", newServicesOffered});
+
+	}
+        else{
+	    res.send({Message: "Invalid info" });
+        }
+
+        
+    }catch(err){
+	console.log(err);
+	res.send(err);
+    }
+});
+
+//Make endpoint that returns all servicesoffered
+app.get("/servicesoffered", async(req, res) =>{
+
+    try{
+        //call function to read user database info
+        let propertiesToPopulate = ['Provider'];
+        let allservicesofferedDocs = await ServicesOffered.read(null, propertiesToPopulate);
+        res.send(allservicesofferedDocs);
+
+    }catch(err){
+        //send error if unable to execute
+        console.log(err);
+        res.send(err);
+    }
+})
+
+//Make endpoint that returns servicesoffered by id
+app.get("/servicesoffered/:servicesofferedId", async(req, res) =>{
+
+    try{
+        let id = req.params.servicesofferedId;
+        //call function to read user database info
+        let propertiesToPopulate = ['Provider'];
+        let servicesOfferedDocs = await ServicesOffered.read({ _id: id}, propertiesToPopulate);
+        let servicesOfferedDoc = servicesOfferedDocs[0];
+        res.send(servicesOfferedDoc);
+
+    }catch(err){
+        //send error if unable to execute
+        console.log(err);
+        res.send(err);
+    }
+})
+
+//create a endpoint to update servicesoffered
+app.put("/servicesoffered/:servicesofferedId", 	passport.authenticate("jwt", { session: false}), async(req, res) =>{
+    try{
+
+        let requestedUser = req.user;
+
+        let providerId = req.body.providerId;
+        if(!providerId){
+            return res.send({"Message": "Missing Provider"});
+        }
+
+        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, providerId);
+        if(!canMakeRequest){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+	//get the id to use
+	let id = req.params.servicesofferedId;
+	//now find the servicesoffered doc
+	let servicesOfferedDocs = await ServicesOffered.read({ _id: id });
+	let servicesOfferedDoc = servicesOfferedDocs[0];
+
+	if(servicesOfferedDoc){
+
+	    //look at the Post req.body for the data used to update this provider document
+	    let updateInfo = {};
+	    if(req.body.AvailableBeds){
+		updateInfo["AvailableBeds"] = req.body.AvailableBeds;
+	    }
+	    if(req.body.TotalBeds){
+		updateInfo["TotalBeds"] = req.body.TotalBeds;
+	    }
+	    if(req.body.VolunteerOpportunities){
+		updateInfo["VolunteerOpportunities"] = req.body.VolunteerOpportunities;
+	    }
+	    if(req.body.VolunteersNeeded){
+		updateInfo["VolunteersNeeded"] = req.body.VolunteersNeeded;
+	    }
+	    if(req.body.ServiceType){
+		updateInfo["ServiceType"] = req.body.ServiceType;
+	    }
+	    if(req.body.ServicesDescription){
+		updateInfo["ServicesDescription"] = req.body.ServicesDescription;
+	    }
+	    if(req.body.CriteriaForService){
+		updateInfo["CriteriaForService"] = req.body.CriteriaForService;
+	    }
+	    if(req.body.WarmingStation){
+		updateInfo["WarmingStation"] = req.body.WarmingStation;
+	    }
+	    updateInfo["updatedAt"] = Date();
+
+	    //update database for user
+	    let updatedServicesOfferedDoc = await ServicesOffered.update(servicesOfferedDoc, updateInfo);
+	    res.send({ message: "Update ServicesOffered doc a success.", updatedServicesOfferedDoc});
+
+	}else{
+	    res.send({ message: "Could not find user to be updated."});
+	}
+
+
+    }catch(err){
+        console.log(err);
+        res.send(err);
+    }
+});
+
+//make endpoint to delete one servicesoffered by id
+app.delete("/servicesoffered/:servicesofferedId", 	passport.authenticate("jwt", { session: false}), async(req, res) => {
+    try{
+
+        let requestedUser = req.user;
+
+        if(!requestedUser.superAdmin && !requestedUser.active){
+           return res.send({"Message": "Unauthorized"});
+        }
+
+	//get user id
+	let id = req.params.servicesofferedId;
+	
+	//first find the one Provider doc
+	let servicesOfferedDocs = await ServicesOffered.read({ _id: id });
+	let servicesOfferedDoc = servicesOfferedDocs[0];
+
+	//verify we have both providerId and providerDoc 
+	if(id && servicesOfferedDoc){
+	//now delete the one doc
+	let deletedServicesOfferedDoc = await ServicesOffered.delete(servicesOfferedDoc);
+	res.send({ message: "Delete was a success.", deletedServicesOfferedDoc});
+	}else{
+	    res.send({ message: "Could not find user"});
+	}
+
+    
+    }catch(err){
+        console.log(err);
+        res.send(err);
+    }
+})
+
+/*************END SERVICES OFFERED ENDPOINTS*****************/
