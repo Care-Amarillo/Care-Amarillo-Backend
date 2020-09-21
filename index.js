@@ -99,7 +99,17 @@ app.get("/users/:userId", passport.authenticate("jwt", { session: false }), asyn
     try {
         //get user id
         let userId = req.params.userId;
-        let allUsers = await User.read({ _id: userId });
+
+
+        let requestedUser = req.user;
+
+        let validUser = await User.checkIfValidUserForRequest(requestedUser, userId);
+        if(!validUser){
+            return res.send({"Message": "Unauthorized"});
+        }
+
+        let allUsers = await User.read({_id: userId});
+
         //check if user exists
         if (allUsers.length > 0) {
             let userDoc = allUsers[0];
