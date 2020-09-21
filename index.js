@@ -298,10 +298,16 @@ app.put("/users/updatePassword/:userId", passport.authenticate("jwt", { session:
 
 
 //create user
-app.post("/users", async (req, res) => {
+app.post("/users",passport.authenticate("jwt", { session: false }), async (req, res) => {
 
 
     try {
+
+        //make sure requested user is an active super admin
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin && !requestedUser.active){
+           return res.send({"Message": "Unauthorized"});
+        }
 
         //get body from the request
         let body = req.body;
@@ -342,8 +348,6 @@ app.post("/users", async (req, res) => {
         let encryptedPasswordAndSalt = await User.generateHash(body.password);
         let encryptedPassword = encryptedPasswordAndSalt.encryptedString;
         let salt = encryptedPasswordAndSalt.salt;
-
-
 
 
         //set data for new user
@@ -511,6 +515,12 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
 
     try {
 
+        //make sure requested user is an active super admin
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin && !requestedUser.active){
+           return res.send({"Message": "Unauthorized"});
+        }
+
         //get body from the request
         let body = req.body;
         console.log("req.body " + JSON.stringify(req.body));
@@ -543,14 +553,7 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
         if (!validEmail) {
             return res.send({ "Message": "Invalid Email" });
         }
-
-
-
-        let requestedUser = req.user;
-
-        //if(!requestedUser.superAdmin && !requestedUser.active){
-        //   return res.send({"Message": "Unauthorized"});
-        // }
+ 
 
         //check if the provider name exists
         let allProviders = await Provider.read({ name: body.name });
@@ -566,8 +569,16 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
             return res.send({ "Message": "Provider email exists" });
         }
 
-        //todo: maybe check address and phone?
 
+        let userIdToAdd = body.userId;
+        if(!userIdToAdd){
+             return res.send({"Message": "Missing Information: User"});
+        }
+
+        let allUsers = await User.read({ _id: userIdToAdd });
+        if (allUsers.length === 0) {
+             return res.send({"Message": "Invalid User"});
+        }
 
         //set data for new provider
         let newProviderInfo = {
@@ -591,35 +602,15 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
             newProviderInfo.long = body.long;
         }
 
-
         //create provider
         let provider = await Provider.create(newProviderInfo);
 
-        AuditEntry.addAuditEntry(req.user, req.body, "Create", "POST", "/providers", provider, "Provider");
+        AuditEntry.addAuditEntry(requestedUser, body, "Create", "POST", "/providers", provider, "Provider");
 
-
-        //if(!user || !provider){
-        //     return res.send({"Message": "Missing Information"});
-        //  }
-
-
-        //   let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, provider);
-        //   if(!canMakeRequest){
-        //      return res.send({"Message": "Unauthorized"});
-        //  }
-
-
-        //    let allManagingUsers = await ManagingUser.read({provider: provider, user: user});
-        //    if(allManagingUsers.length > 0){
-        //        return res.send({"Message": "Managing User Exists"});
-        //    }
-
-
-        console.log("requested user: " + JSON.stringify(requestedUser));
 
         //set data for new managing user
         let newManagingUserInfo = {
-            user: requestedUser._id,
+            user: userIdToAdd,
             active: true,
             provider: provider._id
         };
@@ -627,10 +618,9 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
         //create managing user
         let managingUser = await ManagingUser.create(newManagingUserInfo);
 
-        let allUsers = await User.read({ _id: requestedUser._id });
         let userDocToUpdate = allUsers[0];
         let updateFields = {};
-        for (let [key, value] of Object.entries(requestedUser)) {
+        for (let [key, value] of Object.entries(userDocToUpdate)) {
             if (key == "salt" || key == "password") continue;
             updateFields[key] = value;
         }
@@ -652,7 +642,7 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
         }
 
 
-        //   await AuditEntry.addAuditEntry(user, body, "Create", "POST", "/managingUsers", managingUser, "ManagingUser");
+        await AuditEntry.addAuditEntry(requestedUser, body, "Create", "POST", "/managingUsers", managingUser, "ManagingUser");
 
         res.send({ "Message": "Provider created successfully", provider: provider, updatedUser: cleanUpdatedUser });
     }
