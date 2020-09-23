@@ -7,9 +7,6 @@ import User from './user.js';
 mongoose.Promise = global.Promise;
 
 
-
-
-
 const main = async() => {
 
     try{
