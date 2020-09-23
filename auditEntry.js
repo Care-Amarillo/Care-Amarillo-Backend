@@ -12,6 +12,7 @@ export default class AuditEntry extends Entity {
         provider: {type: mongoose.Schema.Types.ObjectId, ref: 'Provider', required: false},
         providerEntry: {type: mongoose.Schema.Types.ObjectId, ref: 'ProviderEntry', required: false},
         managingUser: {type: mongoose.Schema.Types.ObjectId, ref: 'ManagingUser', required: false},
+        servicesOffered: {type: mongoose.Schema.Types.ObjectId, ref: 'ServicesOffered', required: false},
         createdBy: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false}, //user that requested the change
         ref:  {type: "String", required: true}, //name of Class
         propertiesChanged:  {type: "String", required: false}, //properties changed, comma-delimited
@@ -40,39 +41,50 @@ export default class AuditEntry extends Entity {
                 }
             }
 
-            let docProperties = {};
-            for(let [key, value] of Object.entries(doc.toJSON())) {
-                if(keysUpdated.includes(key)){
-                    docProperties[key] = value;
-                }
+            
+            if(doc){
+		let docProperties = {};
+		for(let [key, value] of Object.entries(doc.toJSON())) {
+		    if(keysUpdated.includes(key)){
+			docProperties[key] = value;
+		    }
+		}
+
+		auditEntry.propertyValuesBefore = docProperties;
             }
 
             auditEntry.propertiesChanged = keysUpdated;
-            auditEntry.propertyValuesBefore = docProperties;
             auditEntry.propertyValuesAfter = body;
 
         }
 
         //add changes to audit entry
         //get objectId to add to audit entry
-        const idToSearch = new mongoose.Types.ObjectId(doc._id);
+        if(doc){
+	    const idToSearch = new mongoose.Types.ObjectId(doc._id);
+	}
+
         const idCreatedBy = new mongoose.Types.ObjectId(userCreatedBy._id);
 
         //figure out which entity to set the ObjectID for
-        switch(ref) {
-            case "User":
-                auditEntry.user = idToSearch;
-              break;
-            case "Provider":
-                auditEntry.provider = idToSearch;
-              break;
-            case "ProviderEntry":
-                auditEntry.providerEntry = idToSearch;
-              break;
-            case "ManagingUser":
-                auditEntry.managingUser = idToSearch;
-              break;
-        }
+        if(doc){
+	    switch(ref) {
+		case "User":
+		    auditEntry.user = idToSearch;
+		  break;
+		case "Provider":
+		    auditEntry.provider = idToSearch;
+		  break;
+		case "ProviderEntry":
+		    auditEntry.providerEntry = idToSearch;
+		  break;
+		case "ServicesOffered":
+		  break;
+		case "ManagingUser":
+		    auditEntry.managingUser = idToSearch;
+		  break;
+	    }
+	}
 
         //set the requested user
         auditEntry.createdBy = idCreatedBy;

@@ -3,6 +3,9 @@ import passport from 'passport';
 import passportLocal from 'passport-local';
 import passportJWT from 'passport-jwt';
 
+//import env variables
+import './config.js';
+
 const JWTStrategy = passportJWT.Strategy;
 const LocalStrategy = passportLocal.Strategy;
 const ExtractJWT = passportJWT.ExtractJwt;
@@ -44,7 +47,7 @@ async function(email, password, callback) {
 passport.use(new JWTStrategy({
     jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
     // Recommended to use a key, instead of a password.
-    secretOrKey: '7dV4J9Y85u35P!mb4hT2brQ2ikXMYp^%f1h' 
+    secretOrKey: process.env.JWT_KEY_OR_SECRET 
 },
 
 //verify  JWT
