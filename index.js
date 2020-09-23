@@ -21,6 +21,9 @@ import url from 'url';
 
 import axios from "axios";
 
+//import env variables
+import './config.js';
+
 mongoose.Promise = global.Promise;
 
 

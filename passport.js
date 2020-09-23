@@ -3,6 +3,9 @@ import passport from 'passport';
 import passportLocal from 'passport-local';
 import passportJWT from 'passport-jwt';
 
+//import env variables
+import './config.js';
+
 const JWTStrategy = passportJWT.Strategy;
 const LocalStrategy = passportLocal.Strategy;
 const ExtractJWT = passportJWT.ExtractJwt;

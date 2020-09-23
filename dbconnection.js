@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import { truncate } from "fs";
 
+//import env variables
+import './config.js';
+
 class DBConnection {
     constructor() {
         const mongoDBUrl = process.env.MONGO_URL;
