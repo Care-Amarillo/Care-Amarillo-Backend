@@ -78,7 +78,8 @@ app.get("/users", passport.authenticate("jwt", { session: false }), async (req, 
                 lName: allUsers[i].lName,
                 email: allUsers[i].email,
                 phone: allUsers[i].phone,
-                title: allUsers[i].title
+                title: allUsers[i].title,
+                passwordLastUpdated: allUsers[i].passwordLastUpdated
             }
 
             //console.log(tempFilteredUser);
@@ -265,6 +266,13 @@ app.put("/users/updatePassword/:userId", passport.authenticate("jwt", { session:
         //get body from the request
         let body = req.body;
 
+        //Setting up password length check.  This is stored in envirement variable for admin to change according to
+        //company polices
+        if(body.password.length < process.env.PASSWORD_LENGTH){
+            return res.send({ "Message": "Password does not meet length requirements" });
+        }
+        
+
         let allUsers = await User.read({ _id: userId });
 
         if (allUsers.length > 0) {
@@ -278,7 +286,7 @@ app.put("/users/updatePassword/:userId", passport.authenticate("jwt", { session:
             let updateFields = {
                 password: encryptedPassword,
                 salt: salt,
-                updatedAt: Date.now()
+                passwordLastUpdated: Date.now()
             };
 
 

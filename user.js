@@ -25,7 +25,8 @@ export default class User extends Entity {
         userType: {type: "Number", default:1, required: true},
         createdAt: {type: "Date", default: Date.now, required: true},
         updatedAt: {type: "Date", default: Date.now, required: true},
-        active: {type: "Boolean", default: false, required:true}
+        active: {type: "Boolean", default: false, required:true},
+        passwordLastUpdated: {type: "Date", default: Date.now, required: true}
 
     });
 
