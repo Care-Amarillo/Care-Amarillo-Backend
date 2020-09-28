@@ -23,6 +23,7 @@ import axios from "axios";
 
 //import env variables
 import './config.js';
+import ThirdPartyApp from './thirdPartyApps.js';
 
 mongoose.Promise = global.Promise;
 
@@ -1740,3 +1741,80 @@ app.delete("/servicesoffered/:servicesofferedId", 	passport.authenticate("jwt", 
 })
 
 /*************END SERVICES OFFERED ENDPOINTS*****************/
+
+
+
+/*************THIRD PARTY APP ENDPOINTS*****************/
+
+//update third party app
+app.put("/thirdPartyApp/:appId", passport.authenticate("jwt", { session: false }), async (req, res) => {
+
+    try {
+        //get provider id
+        let appId = req.params.appId;
+
+
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin && !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+         }
+ 
+
+        let allThirdPartyApps = await ThirdPartyApp.read({ _id: appId });
+        //check if third party app exists
+        if (allThirdPartyApps.length > 0) {
+            let thirdPartyDoc = allThirdPartyApps[0];
+
+            let body = req.body;
+            let activeStatusToSet = body.active;
+            if(!activeStatusToSet){
+                return res.send({"Message": "Missing Active Status"});
+            }
+
+            await AuditEntry.addAuditEntry(requestedUser, req.body, "Update", "PUT", "/thirdPartyApp/:appId", thirdPartyDoc, "ThirdPartyApp");
+
+            let updateFields = body;
+            updateFields.updatedAt = Date.now();
+            let updatedThirdPartyApp = await Provider.update(thirdPartyDoc, updateFields);
+            res.send({ "Message": "Updated Third Party App successfully", provider: updatedThirdPartyApp });
+        }
+        else {
+            res.send({ "Message": "Third Party App doesn't exist" });
+        }
+    }
+    catch (error) {
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+//get all third party apps
+app.get("/thirdPartyApp/", passport.authenticate("jwt", { session: false }), async (req, res) => {
+
+    try {
+        //get provider id
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin && !requestedUser.active){
+            return res.send({"Message": "Unauthorized"});
+         }
+ 
+
+        let allThirdPartyApps = await ThirdPartyApp.read();
+        //check if third party apps exist
+        if (allThirdPartyApps.length > 0) {
+            res.send(allThirdPartyApps);
+        }
+        else {
+            res.send({ "Message": "Third Party App doesn't exist" });
+        }
+    }
+    catch (error) {
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+/*************END THIRD PARTY APP ENDPOINTS*****************/
