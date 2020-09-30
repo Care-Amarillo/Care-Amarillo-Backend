@@ -15,5 +15,5 @@ export default class ThirdPartyApp extends Entity {
     });
 
     //create third party app model
-    static model = mongoose.model("ThirdPartyApp", thirdPartyApp.providerSchema, "ThirdPartyApps");
+    static model = mongoose.model("ThirdPartyApp", ThirdPartyApp.thirdPartyAppSchema, "ThirdPartyApps");
 }
