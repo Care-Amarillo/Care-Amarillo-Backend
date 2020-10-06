@@ -58,33 +58,31 @@ export default class AuditEntry extends Entity {
 
         }
 
+        const idCreatedBy = new mongoose.Types.ObjectId(userCreatedBy._id);
         //add changes to audit entry
         //get objectId to add to audit entry
         if(doc){
-	    const idToSearch = new mongoose.Types.ObjectId(doc._id);
-	}
+            const idToSearch = new mongoose.Types.ObjectId(doc._id);
 
-        const idCreatedBy = new mongoose.Types.ObjectId(userCreatedBy._id);
 
-        //figure out which entity to set the ObjectID for
-        if(doc){
-	    switch(ref) {
-		case "User":
-		    auditEntry.user = idToSearch;
-		  break;
-		case "Provider":
-		    auditEntry.provider = idToSearch;
-		  break;
-		case "ProviderEntry":
-		    auditEntry.providerEntry = idToSearch;
-		  break;
-		case "ServicesOffered":
-		  break;
-		case "ManagingUser":
-		    auditEntry.managingUser = idToSearch;
-		  break;
-	    }
-	}
+            //figure out which entity to set the ObjectID for
+            switch(ref) {
+            case "User":
+                auditEntry.user = idToSearch;
+            break;
+            case "Provider":
+                auditEntry.provider = idToSearch;
+            break;
+            case "ProviderEntry":
+                auditEntry.providerEntry = idToSearch;
+            break;
+            case "ServicesOffered":
+            break;
+            case "ManagingUser":
+                auditEntry.managingUser = idToSearch;
+            break;
+            }
+        }
 
         //set the requested user
         auditEntry.createdBy = idCreatedBy;
