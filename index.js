@@ -546,7 +546,6 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
 
         //get body from the request
         let body = req.body;
-        console.log("req.body " + JSON.stringify(req.body));
 
         if (
             !body.name ||
@@ -593,16 +592,6 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
         }
 
 
-        let userIdToAdd = body.userId;
-        if(!userIdToAdd){
-             return res.send({"Message": "Missing Information: User"});
-        }
-
-        let allUsers = await User.read({ _id: userIdToAdd });
-        if (allUsers.length === 0) {
-             return res.send({"Message": "Invalid User"});
-        }
-
         //set data for new provider
         let newProviderInfo = {
             name: body.name,
@@ -631,43 +620,7 @@ app.post("/providers", passport.authenticate("jwt", { session: false }), async (
         AuditEntry.addAuditEntry(requestedUser, body, "Create", "POST", "/providers", provider, "Provider");
 
 
-        //set data for new managing user
-        let newManagingUserInfo = {
-            user: userIdToAdd,
-            active: true,
-            provider: provider._id
-        };
-
-        //create managing user
-        let managingUser = await ManagingUser.create(newManagingUserInfo);
-
-        let userDocToUpdate = allUsers[0];
-        let updateFields = {};
-        for (let [key, value] of Object.entries(userDocToUpdate)) {
-            if (key == "salt" || key == "password") continue;
-            updateFields[key] = value;
-        }
-        updateFields.updatedAt = Date.now();
-        updateFields.admin = true;
-
-        console.log("user to update: " + JSON.stringify(userDocToUpdate));
-        console.log("user update fields: " + JSON.stringify(updateFields));
-
-
-        //update user
-        let updatedUser = await User.update(userDocToUpdate, updateFields);
-
-
-        let cleanUpdatedUser = {}
-        for (let [key, value] of Object.entries(updatedUser.toJSON())) {
-            if (key == "password" || key == "salt") continue;
-            cleanUpdatedUser[key] = value;
-        }
-
-
-        await AuditEntry.addAuditEntry(requestedUser, body, "Create", "POST", "/managingUsers", managingUser, "ManagingUser");
-
-        res.send({ "Message": "Provider created successfully", provider: provider, updatedUser: cleanUpdatedUser });
+        res.send({ "Message": "Provider created successfully", provider: provider});
     }
     catch (error) {
         console.log(error);
@@ -1001,11 +954,14 @@ app.get("/managingUsers/user/:userId", passport.authenticate("jwt", { session: f
         //get user that made the request
         let requestedUser = req.user;
 
+        //make sure the user is active
+        if (!requestedUser.active) {
+            return res.send({ "Message": "Unauthorized" });
+        }
 
-
-        let canMakeRequest = await ManagingUser.checkIfActiveManagingUser(requestedUser, provider);
-        if(!canMakeRequest){
-            return res.send({"Message": "Unauthorized"});
+        //make sure this is only a super admin or the actual user
+        if (!requestedUser._id.toString() != userId) {
+            return res.send({ "Message": "Unauthorized" });
         }
 
         let propertiesToPopulate = ['provider', 'user'];
