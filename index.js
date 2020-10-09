@@ -408,6 +408,121 @@ app.post("/users",passport.authenticate("jwt", { session: false }), async (req, 
 
 
 
+//create user
+app.post("/users/provider/:providerId",passport.authenticate("jwt", { session: false }), async (req, res) => {
+
+
+    try {
+
+        //make sure requested user is an active super admin
+        let requestedUser = req.user;
+        if(!requestedUser.superAdmin && !requestedUser.active){
+           return res.send({"Message": "Unauthorized"});
+        }
+
+        let providerId = req.params.providerId;
+        if(providerId === ""){
+           return res.send({"Message": "Missing Provider"});
+        }
+
+        //get body from the request
+        let body = req.body;
+
+        if (!body.fName ||
+            !body.lName ||
+            !body.email ||
+            !body.phone ||
+            !body.title ||
+            !body.userType ||
+            !body.password
+        ) {
+            return res.send({ "Message": "Missing information" });
+        }
+
+        //validate phone
+        let validPhone = await User.validPhone(body.phone);
+        if (!validPhone) {
+            return res.send({ "Message": "Invalid Phone Number" });
+        }
+
+        //validate email
+        let validEmail = await User.validEmail(body.email);
+        if (!validEmail) {
+            return res.send({ "Message": "Invalid Email" });
+        }
+
+        //check if the user email exists
+        let allUsers = await User.read({ email: body.email });
+
+        //dont allow user to be created more than once
+        if (allUsers.length > 0) {
+            return res.send({ "Message": "User exists" });
+        }
+
+        //generate salt and encrypted password for the user
+        let encryptedPasswordAndSalt = await User.generateHash(body.password);
+
+        let encryptedPassword = encryptedPasswordAndSalt.encryptedString;
+        let salt = encryptedPasswordAndSalt.salt;
+
+
+        //set data for new user
+        let newUserInfo = {
+            fName: body.fName,
+            lName: body.lName,
+            email: body.email,
+            phone: body.phone,
+            title: body.title,
+            admin: body.admin,
+            superAdmin: body.superAdmin,
+            userType: body.userType,
+            active: body.active,
+            password: encryptedPassword,
+            salt: salt
+        };
+
+        //create user
+        let user = await User.create(newUserInfo);
+
+
+        let cleanUser = {}
+        for (let [key, value] of Object.entries(user.toJSON())) {
+            if (key == "password" || key == "salt") continue;
+            cleanUser[key] = value;
+        }
+
+
+
+        let allManagingUsers = await ManagingUser.read({ provider: providerId, user: user._id });
+        if (allManagingUsers.length > 0) {
+            return res.send({ "Message": "Managing User Exists" });
+        }
+
+
+
+        //set data for new managing user
+        let newManagingUserInfo = {
+            user: user._id,
+            active: true,
+            provider: providerId
+        };
+
+        //create managing user
+        let managingUser = await ManagingUser.create(newManagingUserInfo);
+
+        await AuditEntry.addAuditEntry(req.user, body, "Create", "POST", "/managingUsers", managingUser, "ManagingUser");
+
+        res.send({ "Message": "Person created successfully", user: cleanUser });
+    }
+    catch (error) {
+        console.log(error);
+        res.send(error);
+    }
+});
+
+
+
+
 //update user
 app.put("/users/:userId", passport.authenticate("jwt", { session: false }), async (req, res) => {
 
