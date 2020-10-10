@@ -29,6 +29,12 @@ Distributed Provider System
 
 ---
 
+## Care Amarillo Frontend
+
+- Frontend Code - [code](https://github.com/Care-Amarillo/Care-Amarillo-Frontend)
+
+---
+
 ## How To Use
 
 #### Installation
@@ -38,6 +44,16 @@ Distributed Provider System
 - npm i 
 - node addUser.js
 - Ctrl+C
+- create an .env file in the root directory of the project with your configurables such as 
+
+JWT_KEY_OR_SECRET=testing
+
+MONGO_URL=localhost
+
+MONGO_PORT=27017
+
+EXPRESS_PORT=3000
+
 - node index.js
 
 #### API Reference
@@ -88,9 +104,5 @@ SOFTWARE.
 - Chris Coffee - [cmcoffee91](https://github.com/cmcoffee91)
 - Ariana Rangel - [Arangel4](https://github.com/Arangel4)
 
-[Back To The Top](#top)
+[Back To The Top](#provider-backend)
 
----
-## Care Amarillo Frontend
-
-- Frontend Code - [code](https://github.com/Care-Amarillo/Care-Amarillo-Frontend)
