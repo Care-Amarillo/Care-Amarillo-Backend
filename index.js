@@ -297,13 +297,11 @@ app.put("/users/updatePushId/:userId", passport.authenticate("jwt", {
 
 
 //update user password using password recovery
-app.put("/users/passwordRecovery/:userId", async (req, res) => {
+app.put("/users/passwordRecovery/", async (req, res) => {
 
     try {
 
-        let requestedUser = req.user;
-        let userId = req.params.userId;
-
+        let userId = req.body.userId;
 
         //get body from the request
         let body = req.body;
@@ -326,8 +324,10 @@ app.put("/users/passwordRecovery/:userId", async (req, res) => {
 
             let uuid = req.body.uuid;
 
+
             let allPasswordRecovery = await PasswordRecovery.read({
-                uuid: uuid 
+                uuid: uuid,
+                changed: false 
             });
 
             if (allPasswordRecovery.length > 0) {
@@ -345,6 +345,7 @@ app.put("/users/passwordRecovery/:userId", async (req, res) => {
                 let updatedPasswordRecovery = await PasswordRecovery.update(passwordRecovery, updatedPasswordRecoveryInfo);
 
             } else {
+                console.log("not bigger")
                 return res.send({
                     "Message": "Unauthorized"
                 })
@@ -2356,12 +2357,16 @@ app.post("/getForgotPassword/",  async (req, res) => {
         let uuid = req.body.uuid;
 
         let allPasswordRecovery = await PasswordRecovery.read({
-            uuid: uuid 
+            uuid: uuid,
+            changed: false 
         });
 
         if (allPasswordRecovery.length > 0) {
             let passwordRecovery = allPasswordRecovery[0];
-            res.send(passwordRecovery);
+            res.send({
+                "Message": "Successfully retrieved Password Recovery",
+                "data":passwordRecovery 
+            });
         } else {
             res.send({
                 "Message": "Password Recovery doesn't exist"
