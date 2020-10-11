@@ -804,6 +804,8 @@ app.get("/providers", async (req, res) => {
     const queryObject = url.parse(req.url, true).query;
     const searchQuery = queryObject.searchQuery;
 
+    console.log(queryObject);
+
     try {
         //let allProviders = await Provider.read();
         let allProviders = await Provider.read({
@@ -814,6 +816,42 @@ app.get("/providers", async (req, res) => {
         });
         res.send(allProviders);
     } catch (error) {
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+//get all providers by date endpoint
+app.get("/providersByDate", passport.authenticate("jwt", { session: false }), async (req, res) => {
+
+
+    try {
+        //test to user credentials
+        let requestedUser = req.user;
+        if (!requestedUser.superAdmin && !requestedUser.active) {
+            return res.send({ "Message": "Unauthorized" });
+        }
+
+        //pull user data being passed in URL
+        const queryObject = url.parse(req.url, true).query;
+        //console.log(queryObject);
+
+        //take queryObject data and pull out start and enddate for searching database
+        let startDate = queryObject.startDate;
+        let endDate = queryObject.endDate;
+
+        //set propertiesToPopulate to provider then read database with credentials being passed in
+        let propertiesToPopulate = ['provider'];
+        let allProviderByDate = await Provider.read({ createdAt: { "$gte": startDate, "$lt": endDate } }, propertiesToPopulate);
+
+        //console.log(allProviderByDate);
+
+        //return requested data back to user
+        res.send(allProviderByDate);    
+
+    }
+    catch (error) {
         console.log(error);
         res.send(error);
     }
