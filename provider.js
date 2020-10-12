@@ -15,6 +15,7 @@ export default class Provider extends Entity {
         email: {type: "String", required:true}, 
         phone: {type: "String", required: true},
         title: {type: "String", required: true},
+        services: {type: "String", required: false},
         zip: {type: "String",  required: true},
         type: {type: "Number", default:1, required: true},
         bedsUsed: {type: "Number", default: 0, required: true},
