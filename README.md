@@ -44,15 +44,22 @@ Distributed Provider System
 - npm i 
 - node addUser.js
 - Ctrl+C
-- create an .env file in the root directory of the project with your configurables such as 
+- create an .env file in the root directory of the project with your settings such as: 
 
+``````````
 JWT_KEY_OR_SECRET=testing
-
 MONGO_URL=localhost
-
 MONGO_PORT=27017
-
 EXPRESS_PORT=3000
+MAILGUN_API_KEY=YOUR_MAILGUN_API_KEY
+MAILGUN_API_BASE_URL=YOUR_MAILGUN_BASE_URL
+MAILGUN_DOMAIN=YOUR_MAILGUN_DOMAIN
+CHANGE_PASSWORD_URL=https://yourdomain.com/updatePassword
+EMAIL_URL_REPLACE=https://www.toreplace.com
+PASSWORD_LENGTH=6
+INITIAL_ADMIN_USER_EMAIL=tester@amarillocollege.com
+INITIAL_ADMIN_USER_PASSWORD=testing
+``````````
 
 - node index.js
 

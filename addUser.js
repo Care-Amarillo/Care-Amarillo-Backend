@@ -4,6 +4,8 @@ import './dbconnection.js';
 
 import User from './user.js';
 
+import './config.js'
+
 mongoose.Promise = global.Promise;
 
 
@@ -22,13 +24,13 @@ const main = async() => {
             "active": true,
             "fName": "Tommy",
             "lName": "Johnson",
-            "email": "tester@amarillocollege.com",
+            "email": process.env.INITIAL_ADMIN_USER_EMAIL,
             "phone": "8062345383",
             "title": "Super Admin",
-            "password": "test"
+            "password": process.env.INITIAL_ADMIN_USER_PASSWORD
           }
 
-        let encryptedPasswordAndSalt = await User.generateHash("test");
+        let encryptedPasswordAndSalt = await User.generateHash(process.env.INITIAL_ADMIN_USER_PASSWORD);
         let encryptedPassword = encryptedPasswordAndSalt.encryptedString;
         let salt = encryptedPasswordAndSalt.salt;
         user.password = encryptedPassword;

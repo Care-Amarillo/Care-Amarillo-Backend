@@ -561,7 +561,7 @@ app.post("/users", passport.authenticate("jwt", {
             email: body.email,
             phone: body.phone,
             title: body.title,
-            admin: body.admin,
+            admin: true,
             superAdmin: body.superAdmin,
             userType: body.userType,
             active: body.active,
@@ -1002,6 +1002,7 @@ app.post("/providers", passport.authenticate("jwt", {
             type: body.type,
             zip: body.zip,
             place_id: body.place_id,
+            services: body.services,
             address: body.address,
             totalBeds: body.totalBeds,
             bedsUsed: body.bedsUsed,
@@ -1400,13 +1401,15 @@ app.get("/managingUsers/user/:userId", passport.authenticate("jwt", {
 
         //make sure the user is active
         if (!requestedUser.active) {
+            console.log("not active");
             return res.send({
                 "Message": "Unauthorized"
             });
         }
 
+
         //make sure this is only a super admin or the actual user
-        if (!requestedUser._id.toString() != userId) {
+        if (requestedUser._id.toString() != userId) {
             return res.send({
                 "Message": "Unauthorized"
             });
