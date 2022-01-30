@@ -10,7 +10,8 @@ class DBConnection {
         const mongoDBPort = process.env.MONGO_PORT;
         const mongoDBDatabase = "CareAmarilloDB";
 
-        const connectionInfo = `mongodb://${mongoDBUrl}:${mongoDBPort}/${mongoDBDatabase}`;
+        //const connectionInfo = `mongodb://${mongoDBUrl}:${mongoDBPort}/${mongoDBDatabase}`;
+	const connectionInfo = process.env.MONGO_ATLAS_URL;
         const mongodDBConfig = {
             useNewUrlParser: true,
             useUnifiedTopology: true,
